@@ -1,0 +1,43 @@
+CREATE DATABASE IF NOT EXISTS `my database` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE `my database`;
+
+CREATE TABLE IF NOT EXISTS `users`(
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `username` VARCHAR(255) NOT NULL,
+    `email` VARCHAR(255) NOT NULL,
+    `password` VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`)
+);
+
+CREATE TABLE IF NOT EXISTS `posts`(
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `user_id` INT NOT NULL,
+    `title` VARCHAR(255) NOT NULL,
+    `content` TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+);
+
+
+CREATE TABLE playlist (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    userID INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (userID) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE playlist_songs (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    playlistID INT NOT NULL,
+    songID INT NOT NULL,
+);
+
+SELECT * FROM users;
+SELECT * FROM posts;
+SELECT * FROM playlist;
+SELECT * FROM playlist_songs;
+
+SELECT * FROM songs WHERE artist = ? LIMIT 10;

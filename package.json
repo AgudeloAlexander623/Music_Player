@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "jest": "^30.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.22.2",
+    "supertest": "^7.2.2"
+  }
+}
