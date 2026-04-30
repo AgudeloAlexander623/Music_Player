@@ -118,28 +118,93 @@ SPOTIFY_CLIENT_SECRET=tu_client_secret_aqui
 # Puerto del servidor (opcional, default: 4000)
 PORT=4000
 
-# Base de datos MySQL
+# Base de datos MySQL (OBLIGATORIAS)
 DB_HOST=localhost
-DB_USER=tu_usuario_mysql
-DB_PASSWORD=tu_password_mysql
+DB_USER=reproductor_user
+DB_PASSWORD=tu_password_mysql_segura
 DB_NAME=reproductor_db
+DB_POOL_LIMIT=10
 
 # JWT Secret (cambia esto en producción)
-JWT_SECRET=tu_clave_secreta_muy_segura_aqui
+JWT_SECRET=genera_uno_con_openssl_rand_-base64_32
 ```
 
-### 🔧 Paso 4: Configurar Base de Datos
+### 🔧 Paso 4: Configurar Base de Datos MySQL
 
-#### 4.1 Crear base de datos
-```sql
--- Ejecuta en MySQL Workbench o terminal MySQL
-CREATE DATABASE reproductor_db;
-```
+**⚠️ IMPORTANTE: La BD es OBLIGATORIA para que funcione la autenticación**
 
-#### 4.2 (Opcional) Ejecutar script inicial
+#### Opción A: Setup Automático (RECOMENDADO)
+
 ```bash
-# Si hay datos iniciales en BackEnd/src/db/DataBases.sql
-mysql -u tu_usuario -p reproductor_db < BackEnd/src/db/DataBases.sql
+# Hacer el script ejecutable
+chmod +x setup-database.sh
+
+# Ejecutar el setup
+bash setup-database.sh
+# Te pedirá:
+# - Usuario root de MySQL
+# - Contraseña root
+# - Contraseña para reproductor_user
+# Y configurará todo automáticamente
+```
+
+#### Opción B: Setup Manual
+
+**Requisito previo: MySQL debe estar instalado y corriendo**
+
+```bash
+# Linux
+sudo apt-get install mysql-server
+sudo systemctl start mysql
+
+# Mac
+brew install mysql
+brew services start mysql
+
+# Windows
+# Descargar desde: https://dev.mysql.com/downloads/mysql/
+```
+
+**Crear BD y usuario:**
+
+```bash
+# Conectar a MySQL
+mysql -u root -p
+
+# Dentro de MySQL, ejecutar:
+CREATE DATABASE reproductor_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'reproductor_user'@'localhost' IDENTIFIED BY 'tu_password_aqui';
+GRANT ALL PRIVILEGES ON reproductor_db.* TO 'reproductor_user'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+**Importar schema:**
+
+```bash
+mysql -u reproductor_user -p reproductor_db < BackEnd/src/db/DataBases.sql
+# Ingresa tu password cuando te lo pida
+```
+
+#### Opción C: Docker
+
+```bash
+# Ejecutar MySQL en container
+docker run --name reproductor-mysql \
+  -e MYSQL_ROOT_PASSWORD=root \
+  -e MYSQL_DATABASE=reproductor_db \
+  -p 3306:3306 \
+  -d mysql:8.0
+
+# Luego sigue con "Importar schema" (Opción B)
+```
+
+**Verificar conexión:**
+
+```bash
+# En BackEnd/
+npm run db:verify
+# Deberías ver: ✅ TODAS LAS VERIFICACIONES PASARON
 ```
 
 ### 🔧 Paso 5: Ejecutar la Aplicación

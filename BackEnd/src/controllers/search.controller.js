@@ -1,6 +1,7 @@
 import { searchSpotify } from '../services/spotify.services.js';
 import { searchMusicBrainz } from '../services/musicbrainz.service.js';
 import { mergeResults } from '../utils/mergeResults.js';
+import { insert } from '../db/database.js';
 
 export const searchController = async (req, res) => {
   try {
@@ -60,40 +61,60 @@ export const searchController = async (req, res) => {
       });
     }
 
+    let finalResults = [];
+    let statusCode = 200;
+
     // Si solo una falla, continuar con la otra
     if (spotifyError) {
       console.warn(`[Warning] Spotify failed, using only MusicBrainz results`);
-      return res.status(206).json({
-        results: musicBrainzResults,
-        warning: spotifyError.message,
-        partialContent: true,
-      });
-    }
-
-    if (musicBrainzError) {
+      finalResults = musicBrainzResults;
+      statusCode = 206;
+    } else if (musicBrainzError) {
       console.warn(`[Warning] MusicBrainz failed, using only Spotify results`);
-      return res.status(206).json({
-        results: spotifyResults,
-        warning: musicBrainzError.message,
-        partialContent: true,
-      });
+      finalResults = spotifyResults;
+      statusCode = 206;
+    } else {
+      // Ambas búsquedas fueron exitosas
+      finalResults = mergeResults(spotifyResults, musicBrainzResults);
     }
 
-    // Ambas búsquedas fueron exitosas
-    const merged = mergeResults(spotifyResults, musicBrainzResults);
-    res.json({
-      results: merged,
-      count: merged.length,
+    // Guardar búsqueda en historial si usuario está autenticado
+    if (req.user) {
+      try {
+        await insert('search_history', {
+          user_id: req.user.userId,
+          query: query.trim(),
+          results_count: finalResults.length,
+        });
+      } catch (error) {
+        console.warn(`[History Error] Could not save search history: ${error.message}`);
+        // No bloqueamos la respuesta, solo logueamos el error
+      }
+    }
+
+    // Construir respuesta
+    const response = {
+      results: finalResults,
+      count: finalResults.length,
       sources: {
         spotify: spotifyResults.length,
         musicbrainz: musicBrainzResults.filter(
-          (mb) => !merged.some((m) => m.musicbrainzId === mb.id)
+          (mb) => !finalResults.some((m) => m.musicbrainzId === mb.id)
         ).length,
       },
-    });
+    };
+
+    // Agregar mensajes de advertencia
+    if (spotifyError && !musicBrainzError) {
+      response.warning = `Spotify unavailable: ${spotifyError.message}`;
+    } else if (musicBrainzError && !spotifyError) {
+      response.warning = `MusicBrainz unavailable: ${musicBrainzError.message}`;
+    }
+
+    return res.status(statusCode).json(response);
   } catch (error) {
     console.error(`[Unexpected Error] ${error.message}`, error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "Unexpected error during search",
       details: error.message,
     });
