@@ -23,16 +23,14 @@ import searchRoutes from "./routes/search.routes.js";
 dotenv.config();
 
 /**
- * VALIDACIÓN CRÍTICA DE VARIABLES DE ENTORNO
+ * VALIDACIÓN DE VARIABLES DE ENTORNO
  *
- * El servidor NO puede funcionar sin credenciales de Spotify
- * porque toda la funcionalidad depende de la API de Spotify
+ * Spotify es opcional para arrancar el servidor. Si no hay credenciales,
+ * el backend sigue disponible y la búsqueda degrada a MusicBrainz.
  */
 if (!process.env.SPOTIFY_CLIENT_ID || !process.env.SPOTIFY_CLIENT_SECRET) {
-  console.error("❌ ERROR CRÍTICO: SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET are required in .env");
-  console.error("🔧 SOLUCIÓN: Copia .env.example como .env y configura tus credenciales de Spotify");
-  console.error("📖 VER: https://developer.spotify.com/dashboard para obtener credenciales");
-  process.exit(1);
+  console.warn("⚠️ Spotify no está configurado: SPOTIFY_CLIENT_ID/SPOTIFY_CLIENT_SECRET faltan en .env");
+  console.warn("🎵 El servidor iniciará usando MusicBrainz como fuente disponible");
 }
 
 // Inicializar aplicación Express
