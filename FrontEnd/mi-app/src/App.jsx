@@ -1,100 +1,110 @@
-import './App.css'
+import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+import api from './services/api';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import SearchResults from './components/SearchResults';
+import Player from './components/Player';
+import './App.css';
 
-const playlists = [
-  'Mix de la tarde',
-  'Favoritas recientes',
-  'Descubrimientos',
-  'Vistas esta semana',
-]
+function Home() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [currentTrack, setCurrentTrack] = useState(null);
+  const { logout } = useAuth();
 
-function App() {
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+
+    setLoading(true);
+    try {
+      const res = await api.get(`/search?q=${encodeURIComponent(query)}`);
+      setResults(res.data.tracks || []);
+    } catch (err) {
+      console.error('Error en búsqueda:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddFavorite = async (track) => {
+    try {
+      await api.post('/favorites', {
+        trackId: track.id,
+        name: track.name,
+        artist: track.artist,
+        album: track.album,
+        previewUrl: track.previewUrl,
+        albumImage: track.albumImage,
+      });
+      alert('Agregado a favoritos');
+    } catch (err) {
+      console.error('Error al agregar favorito:', err);
+    }
+  };
+
   return (
-    <main className="app-layout">
-      <section className="panel player-panel">
-        <div className="panel-header">
-          <span className="panel-label">Reproductor</span>
-          <h1>Ahora suena</h1>
-        </div>
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: 20, paddingBottom: 80 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h1>🎵 Reproductor</h1>
+        <button onClick={logout}>Cerrar Sesión</button>
+      </div>
 
-        <div className="player-card">
-          <div className="cover-art" />
+      <form onSubmit={handleSearch} style={{ marginBottom: 20 }}>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar canciones, artistas..."
+          style={{ width: '70%', padding: 10, fontSize: 16 }}
+        />
+        <button type="submit" disabled={loading} style={{ padding: '10px 20px', marginLeft: 10 }}>
+          {loading ? 'Buscando...' : 'Buscar'}
+        </button>
+      </form>
 
-          <div className="track-info">
-            <h2>Cancion seleccionada</h2>
-            <p>Artista principal</p>
-            <span>Album o fuente</span>
-          </div>
+      <SearchResults
+        results={results}
+        onPlay={setCurrentTrack}
+        onAddFavorite={handleAddFavorite}
+      />
 
-          <div className="player-progress">
-            <div className="progress-line">
-              <span className="progress-fill" />
-            </div>
-            <div className="time-row">
-              <small>0:42</small>
-              <small>3:21</small>
-            </div>
-          </div>
-
-          <div className="player-controls">
-            <button type="button">Anterior</button>
-            <button type="button" className="primary-control">Play</button>
-            <button type="button">Siguiente</button>
-          </div>
-        </div>
-      </section>
-
-      <section className="panel home-panel">
-        <div className="panel-header">
-          <span className="panel-label">Home</span>
-          <h2>Playlists y actividad</h2>
-          <p>Este espacio sera el mas amplio para mostrar playlists creadas y las vistas anteriormente.</p>
-        </div>
-
-        <div className="home-grid">
-          <article className="feature-card">
-            <h3>Tu espacio principal</h3>
-            <p>Aqui podremos destacar la playlist activa, recomendaciones o historial reciente.</p>
-          </article>
-
-          <div className="playlist-section">
-            <div className="section-title">
-              <h3>Playlists guardadas</h3>
-              <span>4 items</span>
-            </div>
-
-            <div className="playlist-list">
-              {playlists.map((playlist) => (
-                <article className="playlist-item" key={playlist}>
-                  <div className="playlist-thumb" />
-                  <div>
-                    <strong>{playlist}</strong>
-                    <p>Lista disponible para continuar escuchando.</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <aside className="panel profile-panel">
-        <div className="panel-header">
-          <span className="panel-label">Perfil</span>
-          <h2>Usuario</h2>
-        </div>
-
-        <div className="profile-card">
-          <div className="profile-avatar">A</div>
-          <strong>Alexander</strong>
-          <p>Perfil del usuario</p>
-          <div className="profile-meta">
-            <span>Playlists: 8</span>
-            <span>Recientes: 12</span>
-          </div>
-        </div>
-      </aside>
-    </main>
-  )
+      {currentTrack && (
+        <Player
+          track={currentTrack}
+          onClose={() => setCurrentTrack(null)}
+        />
+      )}
+    </div>
+  );
 }
 
-export default App
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) return <div>Cargando...</div>;
+
+  return user ? children : <Navigate to="/login" />;
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  );
+}
