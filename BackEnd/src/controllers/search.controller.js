@@ -94,7 +94,7 @@ export const searchController = async (req, res) => {
 
     // Construir respuesta
     const response = {
-      results: finalResults,
+      tracks: finalResults,
       count: finalResults.length,
       sources: {
         spotify: spotifyResults.length,

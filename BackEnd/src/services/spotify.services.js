@@ -160,12 +160,12 @@ export async function searchSpotify(query) {
     // Esto permite combinar resultados de múltiples APIs
     return res.data.tracks.items.map((track) => ({
       id: track.id,
-      title: track.name,
+      name: track.name,
       artist: track.artists[0]?.name ?? "",
       album: track.album?.name ?? "",
-      image: track.album?.images[0]?.url ?? "",
-      preview: track.preview_url, // URL de preview (30s) - puede ser null
-      source: "spotify", // Identificar fuente para el frontend
+      albumImage: track.album?.images[0]?.url ?? "",
+      previewUrl: track.preview_url,
+      source: "spotify",
     }));
   } catch (error) {
     if (error instanceof SpotifyServiceError) {

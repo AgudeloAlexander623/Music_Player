@@ -26,7 +26,7 @@ export async function searchMusicBrainz(query) {
 
     return res.data.recordings.map((track) => ({
       id: track.id,
-      title: track.title,
+      name: track.title,
       artist: track['artist-credit']?.[0]?.name ?? 'Unknown',
       source: 'musicbrainz',
     }));

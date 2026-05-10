@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import api from './services/api';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Favorites from './pages/Favorites';
 import SearchResults from './components/SearchResults';
 import Player from './components/Player';
 import './App.css';
@@ -33,12 +34,12 @@ function Home() {
   const handleAddFavorite = async (track) => {
     try {
       await api.post('/favorites', {
-        trackId: track.id,
-        name: track.name,
+        external_track_id: track.id,
+        source: track.source || 'spotify',
+        track_title: track.name,
         artist: track.artist,
         album: track.album,
-        previewUrl: track.previewUrl,
-        albumImage: track.albumImage,
+        preview_url: track.previewUrl,
       });
       alert('Agregado a favoritos');
     } catch (err) {
@@ -50,7 +51,12 @@ function Home() {
     <div style={{ maxWidth: 800, margin: '0 auto', padding: 20, paddingBottom: 80 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h1>🎵 Reproductor</h1>
-        <button onClick={logout}>Cerrar Sesión</button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <Link to="/favorites" style={{ padding: '8px 16px', background: '#e0e0e0', borderRadius: 5, textDecoration: 'none', color: '#000' }}>
+            ⭐ Favoritos
+          </Link>
+          <button onClick={logout}>Cerrar Sesión</button>
+        </div>
       </div>
 
       <form onSubmit={handleSearch} style={{ marginBottom: 20 }}>
@@ -101,6 +107,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/favorites"
+          element={
+            <ProtectedRoute>
+              <Favorites />
             </ProtectedRoute>
           }
         />

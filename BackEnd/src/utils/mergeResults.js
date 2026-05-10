@@ -5,7 +5,7 @@ export function mergeResults(spotify, musicbrainz) {
   spotify.forEach((sp) => {
     const match = musicbrainz.find(
       (mb) =>
-        mb.title.toLowerCase() === sp.title.toLowerCase() &&
+        mb.name.toLowerCase() === sp.name.toLowerCase() &&
         mb.artist.toLowerCase() === sp.artist.toLowerCase()
     );
     results.push({
@@ -22,11 +22,11 @@ export function mergeResults(spotify, musicbrainz) {
     if (!alreadyIncluded) {
       results.push({
         id: mb.id,
-        title: mb.title,
+        name: mb.name,
         artist: mb.artist,
         album: '',
-        image: '',
-        preview: null,
+        albumImage: '',
+        previewUrl: null,
         source: 'musicbrainz',
         musicbrainzId: mb.id,
       });
