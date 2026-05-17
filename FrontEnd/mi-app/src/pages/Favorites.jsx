@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useToast } from '../components/Toast';
 import api from '../services/api';
 import Player from '../components/Player';
 import './Favorites.css';
@@ -8,17 +8,18 @@ export default function Favorites() {
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTrack, setCurrentTrack] = useState(null);
+  const toast = useToast();
 
   const loadFavorites = useCallback(async () => {
     try {
       const res = await api.get('/favorites');
       setFavorites(res.data.favorites || []);
-    } catch (err) {
-      console.error('Error al cargar favoritos:', err);
+    } catch {
+      toast.error('Error al cargar favoritos');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     loadFavorites();
@@ -28,8 +29,9 @@ export default function Favorites() {
     try {
       await api.delete(`/favorites/${id}`);
       setFavorites((prev) => prev.filter((f) => f.id !== id));
-    } catch (err) {
-      console.error('Error al eliminar favorito:', err);
+      toast.success('Eliminado de favoritos');
+    } catch {
+      toast.error('No se pudo eliminar el favorito');
     }
   };
 
@@ -49,7 +51,6 @@ export default function Favorites() {
     <div className="favorites-container">
       <div className="favorites-header">
         <h1>⭐ Favoritos</h1>
-        <Link to="/" className="nav-link">Volver</Link>
       </div>
 
       {loading && <p>Cargando favoritos...</p>}

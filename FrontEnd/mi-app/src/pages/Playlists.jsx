@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useToast } from '../components/Toast';
 import api from '../services/api';
 import Player from '../components/Player';
 import './Playlists.css';
@@ -13,17 +13,18 @@ export default function Playlists() {
   const [expandedId, setExpandedId] = useState(null);
   const [tracks, setTracks] = useState([]);
   const [currentTrack, setCurrentTrack] = useState(null);
+  const toast = useToast();
 
   const loadPlaylists = useCallback(async () => {
     try {
       const res = await api.get('/playlists');
       setPlaylists(res.data.playlists || []);
-    } catch (err) {
-      console.error('Error al cargar playlists:', err);
+    } catch {
+      toast.error('Error al cargar playlists');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     loadPlaylists();
@@ -37,9 +38,10 @@ export default function Playlists() {
       await api.post('/playlists', { name: newName, description: newDesc });
       setNewName('');
       setNewDesc('');
+      toast.success('Playlist creada');
       await loadPlaylists();
-    } catch (err) {
-      console.error('Error al crear playlist:', err);
+    } catch {
+      toast.error('No se pudo crear la playlist');
     } finally {
       setCreating(false);
     }
@@ -49,9 +51,10 @@ export default function Playlists() {
     try {
       await api.delete(`/playlists/${id}`);
       if (expandedId === id) setExpandedId(null);
+      toast.success('Playlist eliminada');
       await loadPlaylists();
-    } catch (err) {
-      console.error('Error al eliminar playlist:', err);
+    } catch {
+      toast.error('No se pudo eliminar la playlist');
     }
   };
 
@@ -64,8 +67,8 @@ export default function Playlists() {
       const res = await api.get(`/playlists/${id}/tracks`);
       setTracks(res.data.tracks || []);
       setExpandedId(id);
-    } catch (err) {
-      console.error('Error al cargar tracks:', err);
+    } catch {
+      toast.error('Error al cargar tracks');
     }
   };
 
@@ -85,8 +88,9 @@ export default function Playlists() {
     try {
       await api.delete(`/playlists/${playlistId}/tracks/${trackId}`);
       setTracks((prev) => prev.filter((t) => t.id !== trackId));
-    } catch (err) {
-      console.error('Error al eliminar track:', err);
+      toast.success('Track eliminado');
+    } catch {
+      toast.error('No se pudo eliminar el track');
     }
   };
 
@@ -94,7 +98,6 @@ export default function Playlists() {
     <div className="playlists-container">
       <div className="playlists-header">
         <h1>📋 Playlists</h1>
-        <Link to="/" className="nav-link">Volver</Link>
       </div>
 
       <form onSubmit={handleCreate} className="create-form">

@@ -1,25 +1,26 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/Toast';
 import './Auth.css';
 
 export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
     try {
       await register(email, password);
+      toast.success('Cuenta creada exitosamente');
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || 'Error al registrarse');
+      toast.error(err.response?.data?.error || 'Error al registrarse');
     } finally {
       setLoading(false);
     }
@@ -28,7 +29,6 @@ export default function Register() {
   return (
     <div className="auth-container">
       <h2 className="auth-title">Registro</h2>
-      {error && <p className="auth-error">{error}</p>}
       <form onSubmit={handleSubmit} className="auth-form">
         <input
           type="email"

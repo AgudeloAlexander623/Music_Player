@@ -1,8 +1,7 @@
 .playlists-container {
   max-width: 800px;
   margin: 0 auto;
-  padding: 20px;
-  padding-bottom: 80px;
+  padding: 80px 20px 80px;
 }
 
 .playlists-header {

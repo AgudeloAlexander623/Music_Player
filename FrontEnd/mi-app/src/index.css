@@ -26,6 +26,10 @@ input {
   min-height: 100vh;
 }
 
+.page-content {
+  padding-top: 70px;
+}
+
 h1,
 h2,
 h3,
