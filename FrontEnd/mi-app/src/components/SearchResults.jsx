@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import './SearchResults.css';
 
 export default function SearchResults({ results, onPlay, onAddFavorite }) {
   const [filter, setFilter] = useState('all');
@@ -10,41 +11,43 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
   });
 
   return (
-    <div>
-      <div style={{ marginBottom: 10 }}>
-        <button onClick={() => setFilter('all')} disabled={filter === 'all'}>Todos</button>
-        <button onClick={() => setFilter('spotify')} disabled={filter === 'spotify'}>Spotify</button>
-        <button onClick={() => setFilter('musicbrainz')} disabled={filter === 'musicbrainz'}>MusicBrainz</button>
+    <div className="search-results">
+      <div className="filter-bar">
+        <button className="filter-btn" onClick={() => setFilter('all')} disabled={filter === 'all'}>
+          Todos
+        </button>
+        <button className="filter-btn" onClick={() => setFilter('spotify')} disabled={filter === 'spotify'}>
+          Spotify
+        </button>
+        <button className="filter-btn" onClick={() => setFilter('musicbrainz')} disabled={filter === 'musicbrainz'}>
+          MusicBrainz
+        </button>
       </div>
 
-      <div style={{ display: 'grid', gap: 10 }}>
+      <div className="track-list">
         {filtered.map((track) => (
-          <div key={track.id} style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: 10,
-            background: '#f5f5f5',
-            borderRadius: 5,
-            gap: 10
-          }}>
+          <div
+            key={`${track.source}-${track.id}`}
+            className="track-item"
+          >
             {track.albumImage && (
-              <img src={track.albumImage} alt="" style={{ width: 60, height: 60, borderRadius: 4 }} />
+              <img src={track.albumImage} alt="" className="track-image" />
             )}
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 'bold' }}>{track.name}</div>
-              <div style={{ color: '#666', fontSize: 14 }}>{track.artist}</div>
+            <div className="track-info">
+              <div className="track-name">{track.name}</div>
+              <div className="track-artist">{track.artist}</div>
               {track.source && (
-                <span style={{ fontSize: 11, background: '#e0e0e0', padding: '2px 6px', borderRadius: 3 }}>
-                  {track.source}
-                </span>
+                <span className="track-source">{track.source}</span>
               )}
             </div>
-            <button onClick={() => onPlay(track)} style={{ padding: '5px 10px' }}>
-              ▶️
-            </button>
-            <button onClick={() => onAddFavorite(track)} style={{ padding: '5px 10px' }}>
-              ❤️
-            </button>
+            <div className="track-actions">
+              <button className="track-btn" onClick={() => onPlay(track)} title="Reproducir">
+                ▶️
+              </button>
+              <button className="track-btn" onClick={() => onAddFavorite(track)} title="Agregar a favoritos">
+                ❤️
+              </button>
+            </div>
           </div>
         ))}
       </div>

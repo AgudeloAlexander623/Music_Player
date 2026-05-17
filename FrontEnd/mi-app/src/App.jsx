@@ -5,8 +5,10 @@ import api from './services/api';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Favorites from './pages/Favorites';
+import Playlists from './pages/Playlists';
 import SearchResults from './components/SearchResults';
 import Player from './components/Player';
+import './pages/Home.css';
 import './App.css';
 
 function Home() {
@@ -14,7 +16,7 @@ function Home() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(null);
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -48,26 +50,26 @@ function Home() {
   };
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: 20, paddingBottom: 80 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+    <div className="home-container">
+      <div className="home-header">
         <h1>🎵 Reproductor</h1>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <Link to="/favorites" style={{ padding: '8px 16px', background: '#e0e0e0', borderRadius: 5, textDecoration: 'none', color: '#000' }}>
-            ⭐ Favoritos
-          </Link>
-          <button onClick={logout}>Cerrar Sesión</button>
+        <div className="home-header-actions">
+          <Link to="/favorites" className="nav-link">⭐ Favoritos</Link>
+          <Link to="/playlists" className="nav-link">📋 Playlists</Link>
+          <span style={{ fontSize: 14, color: '#666' }}>{user?.email}</span>
+          <button className="logout-btn" onClick={logout}>Cerrar Sesión</button>
         </div>
       </div>
 
-      <form onSubmit={handleSearch} style={{ marginBottom: 20 }}>
+      <form onSubmit={handleSearch} className="search-form">
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar canciones, artistas..."
-          style={{ width: '70%', padding: 10, fontSize: 16 }}
+          className="search-input"
         />
-        <button type="submit" disabled={loading} style={{ padding: '10px 20px', marginLeft: 10 }}>
+        <button type="submit" disabled={loading} className="search-btn">
           {loading ? 'Buscando...' : 'Buscar'}
         </button>
       </form>
@@ -115,6 +117,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Favorites />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/playlists"
+          element={
+            <ProtectedRoute>
+              <Playlists />
             </ProtectedRoute>
           }
         />

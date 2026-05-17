@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import './Auth.css';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -25,17 +26,17 @@ export default function Login() {
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: '50px auto', padding: 20 }}>
-      <h2>Iniciar Sesión</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
+    <div className="auth-container">
+      <h2 className="auth-title">Iniciar Sesión</h2>
+      {error && <p className="auth-error">{error}</p>}
+      <form onSubmit={handleSubmit} className="auth-form">
         <input
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          style={{ width: '100%', marginBottom: 10, padding: 8 }}
+          className="auth-input"
         />
         <input
           type="password"
@@ -43,13 +44,15 @@ export default function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          style={{ width: '100%', marginBottom: 10, padding: 8 }}
+          className="auth-input"
         />
-        <button type="submit" disabled={loading} style={{ width: '100%', padding: 10 }}>
+        <button type="submit" disabled={loading} className="auth-button">
           {loading ? 'Cargando...' : 'Iniciar Sesión'}
         </button>
       </form>
-      <p>¿No tienes cuenta? <Link to="/register">Regístrate</Link></p>
+      <p className="auth-link">
+        ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
+      </p>
     </div>
   );
 }

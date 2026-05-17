@@ -1,18 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import Player from '../components/Player';
+import './Favorites.css';
 
 export default function Favorites() {
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTrack, setCurrentTrack] = useState(null);
 
-  useEffect(() => {
-    loadFavorites();
-  }, []);
-
-  const loadFavorites = async () => {
+  const loadFavorites = useCallback(async () => {
     try {
       const res = await api.get('/favorites');
       setFavorites(res.data.favorites || []);
@@ -21,7 +18,11 @@ export default function Favorites() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadFavorites();
+  }, [loadFavorites]);
 
   const handleRemoveFavorite = async (id) => {
     try {
@@ -45,49 +46,36 @@ export default function Favorites() {
   };
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: 20, paddingBottom: 80 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+    <div className="favorites-container">
+      <div className="favorites-header">
         <h1>⭐ Favoritos</h1>
-        <Link to="/" style={{ padding: '8px 16px', background: '#e0e0e0', borderRadius: 5, textDecoration: 'none', color: '#000' }}>
-          Volver
-        </Link>
+        <Link to="/" className="nav-link">Volver</Link>
       </div>
 
       {loading && <p>Cargando favoritos...</p>}
 
       {!loading && favorites.length === 0 && (
-        <p style={{ color: '#666', textAlign: 'center', marginTop: 40 }}>
+        <p className="favorites-empty">
           No tienes favoritos aún. Busca canciones y agrégalas desde la pantalla principal.
         </p>
       )}
 
-      <div style={{ display: 'grid', gap: 10 }}>
+      <div className="favorites-list">
         {favorites.map((fav) => (
-          <div key={fav.id} style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: 10,
-            background: '#f5f5f5',
-            borderRadius: 5,
-            gap: 10
-          }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 'bold' }}>{fav.track_title}</div>
-              <div style={{ color: '#666', fontSize: 14 }}>{fav.artist}</div>
+          <div key={fav.id} className="favorite-item">
+            <div className="favorite-info">
+              <div className="favorite-title">{fav.track_title}</div>
+              <div className="favorite-artist">{fav.artist}</div>
               {fav.source && (
-                <span style={{ fontSize: 11, background: '#e0e0e0', padding: '2px 6px', borderRadius: 3 }}>
-                  {fav.source}
-                </span>
+                <span className="favorite-source">{fav.source}</span>
               )}
             </div>
-            {fav.preview_url && (
-              <button onClick={() => handlePlay(fav)} style={{ padding: '5px 10px' }}>
-                ▶️
-              </button>
-            )}
-            <button onClick={() => handleRemoveFavorite(fav.id)} style={{ padding: '5px 10px' }}>
-              🗑️
-            </button>
+            <div className="favorite-actions">
+              {fav.preview_url && (
+                <button className="track-btn" onClick={() => handlePlay(fav)}>▶️</button>
+              )}
+              <button className="track-btn" onClick={() => handleRemoveFavorite(fav.id)}>🗑️</button>
+            </div>
           </div>
         ))}
       </div>

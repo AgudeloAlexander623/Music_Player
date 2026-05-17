@@ -28,6 +28,55 @@ CREATE TABLE IF NOT EXISTS `users` (
 );
 
 -- ===========================================
+-- TABLA: MUSICIANS
+-- ===========================================
+-- Perfil extendido para usuarios músicos que subirán música gratis
+-- y orientada a uso sin copyright.
+-- Campos:
+--   id: identificador único
+--   user_id: referencia al usuario dueño del perfil
+--   stage_name: nombre artístico visible
+--   legal_name: nombre real del músico (opcional)
+--   artist_bio: biografía o descripción corta
+--   country: país de origen
+--   contact_email: correo público de contacto
+--   profile_image_url: foto o avatar del músico
+--   music_genre: género musical principal
+--   license_type: tipo de licencia libre declarada
+--   copyright_free: indica si la música puede usarse sin copyright
+--   commercial_use_allowed: permite uso comercial
+--   attribution_required: indica si requiere dar créditos
+--   terms_accepted_at: fecha en que aceptó condiciones de publicación
+--   created_at: timestamp de creación
+--   updated_at: timestamp de última actualización
+--
+
+CREATE TABLE IF NOT EXISTS `musicians` (
+    `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `stage_name` VARCHAR(150) NOT NULL,
+    `legal_name` VARCHAR(150),
+    `artist_bio` TEXT,
+    `country` VARCHAR(100),
+    `contact_email` VARCHAR(255) COLLATE utf8mb4_unicode_ci,
+    `profile_image_url` TEXT,
+    `music_genre` VARCHAR(100),
+    `license_type` ENUM('public_domain', 'cc0', 'cc_by', 'cc_by_sa', 'custom_free_license') NOT NULL DEFAULT 'cc0',
+    `copyright_free` BOOLEAN NOT NULL DEFAULT TRUE,
+    `commercial_use_allowed` BOOLEAN NOT NULL DEFAULT TRUE,
+    `attribution_required` BOOLEAN NOT NULL DEFAULT FALSE,
+    `terms_accepted_at` TIMESTAMP NULL DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    UNIQUE KEY `unique_musician_user` (`user_id`),
+    UNIQUE KEY `unique_musician_stage_name` (`stage_name`),
+    INDEX `idx_musicians_stage_name` (`stage_name`),
+    INDEX `idx_musicians_license_type` (`license_type`),
+    INDEX `idx_musicians_copyright_free` (`copyright_free`)
+);
+
+-- ===========================================
 -- TABLA: FAVORITOS (TRACKS)
 -- ===========================================
 -- Almacena canciones favoritas de usuarios
@@ -155,6 +204,9 @@ ALTER TABLE `users` ADD UNIQUE KEY `unique_email` (`email`);
 
 -- Ver todos los usuarios
 -- SELECT * FROM users;
+
+-- Ver músicos registrados para música sin copyright
+-- SELECT * FROM musicians WHERE copyright_free = TRUE ORDER BY created_at DESC;
 
 -- Ver los favoritos de un usuario
 -- SELECT * FROM favorite_tracks WHERE user_id = 1 ORDER BY added_at DESC;
