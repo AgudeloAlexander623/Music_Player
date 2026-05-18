@@ -1,51 +1,210 @@
-/* Player component styles */
 .player-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: #282828;
+  background: #181818;
   color: #fff;
   padding: 12px 20px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
   align-items: center;
-  justify-content: space-between;
+  gap: 16px;
   z-index: 1000;
+  border-top: 1px solid #282828;
 }
 
 .player-track-info {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .player-image {
-  width: 50px;
-  height: 50px;
+  width: 56px;
+  height: 56px;
   border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.player-text {
+  min-width: 0;
 }
 
 .player-name {
-  font-weight: bold;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .player-artist {
   font-size: 12px;
   color: #b3b3b3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.player-controls {
+.player-center {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
   align-items: center;
+  gap: 8px;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.player-main-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.player-control-btn {
+  background: none;
+  border: none;
+  color: #b3b3b3;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+}
+
+.player-control-btn:hover:not(:disabled) {
+  color: #fff;
+}
+
+.player-control-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .player-play-btn {
-  font-size: 24px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  color: #000;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s;
+}
+
+.player-play-btn:hover:not(:disabled) {
+  transform: scale(1.06);
+}
+
+.player-play-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.player-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.player-time {
+  font-size: 11px;
+  color: #b3b3b3;
+  min-width: 36px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: #4d4d4d;
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.player-progress-bar:hover {
+  height: 6px;
+}
+
+.player-progress-fill {
+  height: 100%;
+  background: #1db954;
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.player-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.player-no-preview {
+  color: #b3b3b3;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.player-volume {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.player-volume-btn {
   background: none;
   border: none;
-  color: #fff;
+  color: #b3b3b3;
+  font-size: 16px;
   cursor: pointer;
+  padding: 2px;
+  transition: color 0.2s;
+}
+
+.player-volume-btn:hover {
+  color: #fff;
+}
+
+.player-volume-slider {
+  width: 80px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #4d4d4d;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.player-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+
+.player-volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  border: none;
 }
 
 .player-close-btn {
@@ -54,10 +213,35 @@
   color: #b3b3b3;
   cursor: pointer;
   font-size: 18px;
+  padding: 4px;
+  transition: color 0.2s;
 }
 
-.player-no-preview {
-  color: #b3b3b3;
-  font-size: 13px;
-  font-style: italic;
+.player-close-btn:hover {
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  .player-bar {
+    grid-template-columns: 1fr auto;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .player-center {
+    display: none;
+  }
+
+  .player-right {
+    gap: 8px;
+  }
+
+  .player-volume-slider {
+    width: 50px;
+  }
+
+  .player-image {
+    width: 40px;
+    height: 40px;
+  }
 }

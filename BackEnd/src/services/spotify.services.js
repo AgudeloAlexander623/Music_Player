@@ -135,14 +135,16 @@ async function ensureToken() {
  * @param {string} query - Término de búsqueda (artista, canción, álbum)
  * @returns {Array} Array de tracks normalizados
  */
-export async function searchSpotify(query) {
+export async function searchSpotify(query, limit = 10) {
   try {
     // Asegurar token válido antes de buscar
     await ensureToken();
 
+    const searchLimit = Math.min(limit, 50);
+
     // Request a Spotify Search API
     const res = await axios.get(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=${searchLimit}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,

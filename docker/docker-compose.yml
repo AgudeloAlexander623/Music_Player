@@ -1,0 +1,85 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: reproductor-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-reproductor_db}
+      MYSQL_USER: ${DB_USER:-reproductor_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-reproductor_pass}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../BackEnd/src/db/DataBases.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - reproductor-network
+
+  backend:
+    build:
+      context: ../BackEnd
+      dockerfile: ../docker/Dockerfile.backend
+    container_name: reproductor-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DB_HOST=mysql
+      - DB_USER=${DB_USER:-reproductor_user}
+      - DB_PASSWORD=${DB_PASSWORD:-reproductor_pass}
+      - DB_NAME=${DB_NAME:-reproductor_db}
+      - DB_POOL_LIMIT=10
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - FMA_API_KEY=${FMA_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - PYTHON_SERVICE_URL=http://python-service:8000
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    networks:
+      - reproductor-network
+
+  frontend:
+    build:
+      context: ../FrontEnd/mi-app
+      dockerfile: ../../docker/Dockerfile.frontend
+    container_name: reproductor-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:${BACKEND_PORT:-4000}/api
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    networks:
+      - reproductor-network
+
+  python-service:
+    build:
+      context: ../python-services
+      dockerfile: ../docker/Dockerfile.python
+    container_name: reproductor-python
+    restart: unless-stopped
+    ports:
+      - "${PYTHON_PORT:-8000}:8000"
+    networks:
+      - reproductor-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  reproductor-network:
+    driver: bridge

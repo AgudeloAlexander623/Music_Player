@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log
+.env
+.env.local
+*.md
+.git
+.gitignore
+docker
+python-services
+FrontEnd

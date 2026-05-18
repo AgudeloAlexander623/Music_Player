@@ -7,6 +7,7 @@ import searchRoutes from "./routes/search.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import favoritesRoutes from "./routes/favorites.routes.js";
 import playlistsRoutes from "./routes/playlists.routes.js";
+import recommendationsRoutes from "./routes/recommendations.routes.js";
 import { initializeDatabase } from "./db/database.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,6 +24,7 @@ app.use("/api/search", searchRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/favorites", favoritesRoutes);
 app.use("/api/playlists", playlistsRoutes);
+app.use("/api/recommendations", recommendationsRoutes);
 
 const PORT = process.env.PORT || 4000;
 

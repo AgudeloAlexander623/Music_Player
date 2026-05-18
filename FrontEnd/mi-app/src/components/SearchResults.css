@@ -1,4 +1,3 @@
-/* SearchResults component styles */
 .search-results {
   display: flex;
   flex-direction: column;
@@ -9,6 +8,7 @@
   display: flex;
   gap: 8px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
 .filter-btn {
@@ -74,18 +74,47 @@
   font-size: 14px;
 }
 
+.track-meta {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  align-items: center;
+}
+
 .track-source {
   font-size: 11px;
-  background: #e0e0e0;
   padding: 2px 8px;
   border-radius: 10px;
-  margin-top: 4px;
   display: inline-block;
+  font-weight: 500;
+}
+
+.source-spotify {
+  background: #1db954;
+  color: #fff;
+}
+
+.source-musicbrainz {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.source-fma {
+  background: #f0652f;
+  color: #fff;
+}
+
+.track-license {
+  font-size: 10px;
+  color: #888;
+  font-style: italic;
 }
 
 .track-actions {
   display: flex;
   gap: 6px;
+  align-items: center;
+  position: relative;
 }
 
 .track-btn {
@@ -100,4 +129,76 @@
 
 .track-btn:hover {
   background: #e0e0e0;
+}
+
+.track-playlist-dropdown {
+  position: relative;
+}
+
+.playlist-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+  padding: 4px 0;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.dropdown-item:hover {
+  background: #f0f0f0;
+}
+
+.dropdown-loading,
+.dropdown-empty {
+  display: block;
+  padding: 8px 12px;
+  color: #888;
+  font-size: 13px;
+  text-align: center;
+}
+
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.load-more-btn {
+  padding: 10px 24px;
+  border: 2px solid #1db954;
+  border-radius: 24px;
+  background: transparent;
+  color: #1db954;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.load-more-btn:hover:not(:disabled) {
+  background: #1db954;
+  color: #fff;
+}
+
+.load-more-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

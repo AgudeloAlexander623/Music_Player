@@ -1,0 +1,79 @@
+version: "3.9"
+
+services:
+  mysql:
+    extends:
+      file: docker-compose.yml
+      service: mysql
+
+  backend:
+    build:
+      context: ../BackEnd
+      dockerfile: ../docker/Dockerfile.backend
+    container_name: reproductor-backend-dev
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - DB_HOST=mysql
+      - DB_USER=${DB_USER:-reproductor_user}
+      - DB_PASSWORD=${DB_PASSWORD:-reproductor_pass}
+      - DB_NAME=${DB_NAME:-reproductor_db}
+      - DB_POOL_LIMIT=10
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - FMA_API_KEY=${FMA_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - PYTHON_SERVICE_URL=http://python-service:8000
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    volumes:
+      - ../BackEnd:/app
+      - /app/node_modules
+    command: npm run dev
+    networks:
+      - reproductor-network
+
+  frontend:
+    build:
+      context: ../FrontEnd/mi-app
+      dockerfile: ../docker/Dockerfile.frontend.dev
+    container_name: reproductor-frontend-dev
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:${BACKEND_PORT:-4000}/api
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ../FrontEnd/mi-app:/app
+      - /app/node_modules
+    command: npm run dev -- --host
+    networks:
+      - reproductor-network
+
+  python-service:
+    build:
+      context: ../python-services
+      dockerfile: ../docker/Dockerfile.python
+    container_name: reproductor-python-dev
+    restart: unless-stopped
+    ports:
+      - "${PYTHON_PORT:-8000}:8000"
+    volumes:
+      - ../python-services:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - reproductor-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  reproductor-network:
+    driver: bridge

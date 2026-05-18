@@ -1,12 +1,54 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useToast } from './Toast';
+import api from '../services/api';
 import './SearchResults.css';
 
 export default function SearchResults({ results, onPlay, onAddFavorite }) {
   const [filter, setFilter] = useState('all');
+  const [playlistMenuId, setPlaylistMenuId] = useState(null);
+  const [userPlaylists, setUserPlaylists] = useState([]);
+  const [loadingPlaylists, setLoadingPlaylists] = useState(false);
+  const toast = useToast();
+
+  useEffect(() => {
+    if (playlistMenuId !== null && userPlaylists.length === 0) {
+      loadPlaylists();
+    }
+  }, [playlistMenuId]);
+
+  const loadPlaylists = async () => {
+    setLoadingPlaylists(true);
+    try {
+      const res = await api.get('/playlists');
+      setUserPlaylists(res.data.playlists || []);
+    } catch {
+      toast.error('No se pudieron cargar las playlists');
+    } finally {
+      setLoadingPlaylists(false);
+    }
+  };
+
+  const handleAddToPlaylist = async (track, playlistId) => {
+    try {
+      await api.post(`/playlists/${playlistId}/tracks`, {
+        external_track_id: track.id,
+        source: track.source || 'spotify',
+        track_title: track.name,
+        artist: track.artist,
+        album: track.album,
+        preview_url: track.previewUrl,
+      });
+      toast.success('Agregado a la playlist');
+    } catch {
+      toast.error('No se pudo agregar a la playlist');
+    }
+    setPlaylistMenuId(null);
+  };
 
   const filtered = results.filter((item) => {
     if (filter === 'spotify') return item.source === 'spotify';
     if (filter === 'musicbrainz') return item.source === 'musicbrainz';
+    if (filter === 'fma') return item.source === 'fma';
     return true;
   });
 
@@ -22,6 +64,9 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
         <button className="filter-btn" onClick={() => setFilter('musicbrainz')} disabled={filter === 'musicbrainz'}>
           MusicBrainz
         </button>
+        <button className="filter-btn" onClick={() => setFilter('fma')} disabled={filter === 'fma'}>
+          FMA
+        </button>
       </div>
 
       <div className="track-list">
@@ -36,9 +81,14 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
             <div className="track-info">
               <div className="track-name">{track.name}</div>
               <div className="track-artist">{track.artist}</div>
-              {track.source && (
-                <span className="track-source">{track.source}</span>
-              )}
+              <div className="track-meta">
+                {track.source && (
+                  <span className={`track-source source-${track.source}`}>{track.source}</span>
+                )}
+                {track.license && (
+                  <span className="track-license">{track.license}</span>
+                )}
+              </div>
             </div>
             <div className="track-actions">
               <button className="track-btn" onClick={() => onPlay(track)} title="Reproducir">
@@ -47,6 +97,34 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
               <button className="track-btn" onClick={() => onAddFavorite(track)} title="Agregar a favoritos">
                 ❤️
               </button>
+              <div className="track-playlist-dropdown">
+                <button
+                  className="track-btn"
+                  onClick={() => setPlaylistMenuId(playlistMenuId === track.id ? null : track.id)}
+                  title="Agregar a playlist"
+                >
+                  📋
+                </button>
+                {playlistMenuId === track.id && (
+                  <div className="playlist-dropdown-menu">
+                    {loadingPlaylists ? (
+                      <span className="dropdown-loading">Cargando...</span>
+                    ) : userPlaylists.length === 0 ? (
+                      <span className="dropdown-empty">Sin playlists</span>
+                    ) : (
+                      userPlaylists.map((pl) => (
+                        <button
+                          key={pl.id}
+                          className="dropdown-item"
+                          onClick={() => handleAddToPlaylist(track, pl.id)}
+                        >
+                          {pl.name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}

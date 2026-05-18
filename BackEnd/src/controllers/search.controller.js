@@ -1,7 +1,11 @@
 import { searchSpotify } from '../services/spotify.services.js';
 import { searchMusicBrainz } from '../services/musicbrainz.service.js';
+import { searchFMA } from '../services/fma.services.js';
 import { mergeResults } from '../utils/mergeResults.js';
 import { insert } from '../db/database.js';
+
+const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 50;
 
 export const searchController = async (req, res) => {
   try {
@@ -21,14 +25,21 @@ export const searchController = async (req, res) => {
       });
     }
 
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(
+      MAX_LIMIT,
+      Math.max(1, parseInt(req.query.limit) || DEFAULT_LIMIT)
+    );
+
     let spotifyResults = [];
     let spotifyError = null;
     let musicBrainzResults = [];
     let musicBrainzError = null;
+    let fmaResults = [];
+    let fmaError = null;
 
-    // Intentar búsqueda en Spotify
     try {
-      spotifyResults = await searchSpotify(query);
+      spotifyResults = await searchSpotify(query, limit);
     } catch (error) {
       spotifyError = {
         service: 'Spotify',
@@ -38,9 +49,8 @@ export const searchController = async (req, res) => {
       console.error(`[Spotify Error] ${error.message}`);
     }
 
-    // Intentar búsqueda en MusicBrainz (independiente de Spotify)
     try {
-      musicBrainzResults = await searchMusicBrainz(query);
+      musicBrainzResults = await searchMusicBrainz(query, limit);
     } catch (error) {
       musicBrainzError = {
         service: 'MusicBrainz',
@@ -50,35 +60,39 @@ export const searchController = async (req, res) => {
       console.error(`[MusicBrainz Error] ${error.message}`);
     }
 
-    // Si ambas búsquedas fallaron, retornar error
-    if (spotifyError && musicBrainzError) {
+    try {
+      fmaResults = await searchFMA(query, page, limit);
+    } catch (error) {
+      fmaError = {
+        service: 'FMA',
+        message: error.message,
+        statusCode: error.statusCode || 500,
+      };
+      console.error(`[FMA Error] ${error.message}`);
+    }
+
+    const activeServices = [spotifyError, musicBrainzError, fmaError].filter(Boolean).length;
+    if (activeServices === 3) {
       return res.status(500).json({
-        error: "Both search services failed",
+        error: "All search services failed",
         details: {
-          spotify: spotifyError.message,
-          musicbrainz: musicBrainzError.message,
+          spotify: spotifyError?.message,
+          musicbrainz: musicBrainzError?.message,
+          fma: fmaError?.message,
         },
       });
     }
 
     let finalResults = [];
-    let statusCode = 200;
 
-    // Si solo una falla, continuar con la otra
-    if (spotifyError) {
-      console.warn(`[Warning] Spotify failed, using only MusicBrainz results`);
-      finalResults = musicBrainzResults;
-      statusCode = 206;
-    } else if (musicBrainzError) {
-      console.warn(`[Warning] MusicBrainz failed, using only Spotify results`);
-      finalResults = spotifyResults;
-      statusCode = 206;
-    } else {
-      // Ambas búsquedas fueron exitosas
-      finalResults = mergeResults(spotifyResults, musicBrainzResults);
+    if (spotifyError && musicBrainzError && fmaError) {
+      return res.status(500).json({
+        error: "All search services failed",
+      });
     }
 
-    // Guardar búsqueda en historial si usuario está autenticado
+    finalResults = mergeResults(spotifyResults, musicBrainzResults, fmaResults);
+
     if (req.user) {
       try {
         await insert('search_history', {
@@ -88,29 +102,33 @@ export const searchController = async (req, res) => {
         });
       } catch (error) {
         console.warn(`[History Error] Could not save search history: ${error.message}`);
-        // No bloqueamos la respuesta, solo logueamos el error
       }
     }
 
-    // Construir respuesta
+    const warnings = [];
+    if (spotifyError) warnings.push(`Spotify unavailable: ${spotifyError.message}`);
+    if (musicBrainzError) warnings.push(`MusicBrainz unavailable: ${musicBrainzError.message}`);
+    if (fmaError) warnings.push(`FMA unavailable: ${fmaError.message}`);
+
     const response = {
       tracks: finalResults,
       count: finalResults.length,
+      pagination: {
+        page,
+        limit,
+      },
       sources: {
         spotify: spotifyResults.length,
-        musicbrainz: musicBrainzResults.filter(
-          (mb) => !finalResults.some((m) => m.musicbrainzId === mb.id)
-        ).length,
+        musicbrainz: musicBrainzResults.length,
+        fma: fmaResults.length,
       },
     };
 
-    // Agregar mensajes de advertencia
-    if (spotifyError && !musicBrainzError) {
-      response.warning = `Spotify unavailable: ${spotifyError.message}`;
-    } else if (musicBrainzError && !spotifyError) {
-      response.warning = `MusicBrainz unavailable: ${musicBrainzError.message}`;
+    if (warnings.length > 0) {
+      response.warnings = warnings;
     }
 
+    const statusCode = warnings.length > 0 ? 206 : 200;
     return res.status(statusCode).json(response);
   } catch (error) {
     console.error(`[Unexpected Error] ${error.message}`, error);

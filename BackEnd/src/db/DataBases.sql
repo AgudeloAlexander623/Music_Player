@@ -1,10 +1,8 @@
 -- ===========================================
 -- REPRODUCTOR DE MÚSICA - SCHEMA DE BASE DE DATOS
 -- ===========================================
-
--- Crear base de datos (usando nombre más descriptivo)
-CREATE DATABASE IF NOT EXISTS `reproductor_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `reproductor_db`;
+-- Este archivo se ejecuta automáticamente al iniciar MySQL en Docker
+-- La base de datos ya fue creada por las variables de entorno
 
 -- ===========================================
 -- TABLA: USUARIOS
@@ -96,7 +94,7 @@ CREATE TABLE IF NOT EXISTS `favorite_tracks` (
     `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `user_id` INT NOT NULL,
     `external_track_id` VARCHAR(255) NOT NULL,
-    `source` ENUM('spotify', 'musicbrainz') NOT NULL,
+    `source` ENUM('spotify', 'musicbrainz', 'fma') NOT NULL,
     `track_title` VARCHAR(255) NOT NULL,
     `artist` VARCHAR(255),
     `album` VARCHAR(255),
@@ -175,7 +173,7 @@ CREATE TABLE IF NOT EXISTS `playlist_tracks` (
     `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `playlist_id` INT NOT NULL,
     `external_track_id` VARCHAR(255) NOT NULL,
-    `source` ENUM('spotify', 'musicbrainz') NOT NULL,
+    `source` ENUM('spotify', 'musicbrainz', 'fma') NOT NULL,
     `track_title` VARCHAR(255) NOT NULL,
     `artist` VARCHAR(255),
     `album` VARCHAR(255),
@@ -194,9 +192,8 @@ CREATE TABLE IF NOT EXISTS `playlist_tracks` (
 -- ===========================================
 -- ÍNDICES ADICIONALES PARA PERFORMANCE
 -- ===========================================
-
--- Búsquedas rápidas por usuario en favoritos y playlists
-ALTER TABLE `users` ADD UNIQUE KEY `unique_email` (`email`);
+-- Nota: El índice UNIQUE en users.email ya está definido en el CREATE TABLE.
+-- No se requiere ALTER TABLE adicional.
 
 -- ===========================================
 -- COMENTARIOS Y QUERIES DE REFERENCIA

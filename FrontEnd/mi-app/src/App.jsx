@@ -19,21 +19,57 @@ function Home() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(null);
+  const [queue, setQueue] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const toast = useToast();
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
+  const handleSearch = async (e, pageNum = 1) => {
+    e?.preventDefault();
     if (!query.trim()) return;
 
     setLoading(true);
     try {
-      const res = await api.get(`/search?q=${encodeURIComponent(query)}`);
-      setResults(res.data.tracks || []);
-      if (res.data.warning) toast.info(res.data.warning);
+      const res = await api.get(`/search?q=${encodeURIComponent(query)}&page=${pageNum}&limit=10`);
+      const tracks = res.data.tracks || [];
+      if (pageNum === 1) {
+        setResults(tracks);
+      } else {
+        setResults((prev) => [...prev, ...tracks]);
+      }
+      setHasMore(tracks.length === 10);
+      setPage(pageNum);
+      if (res.data.warnings) {
+        res.data.warnings.forEach((w) => toast.info(w));
+      }
     } catch {
       toast.error('Error en la búsqueda. Intenta de nuevo.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    handleSearch(null, page + 1);
+  };
+
+  const handlePlay = (track) => {
+    const trackQueue = results.filter((t) => t.previewUrl);
+    setQueue(trackQueue);
+    setCurrentTrack(track);
+  };
+
+  const handlePlayNext = () => {
+    const idx = queue.findIndex((t) => t.id === currentTrack?.id && t.source === currentTrack?.source);
+    if (idx >= 0 && idx < queue.length - 1) {
+      setCurrentTrack(queue[idx + 1]);
+    }
+  };
+
+  const handlePlayPrevious = () => {
+    const idx = queue.findIndex((t) => t.id === currentTrack?.id && t.source === currentTrack?.source);
+    if (idx > 0) {
+      setCurrentTrack(queue[idx - 1]);
     }
   };
 
@@ -72,13 +108,24 @@ function Home() {
 
         <SearchResults
           results={results}
-          onPlay={setCurrentTrack}
+          onPlay={handlePlay}
           onAddFavorite={handleAddFavorite}
         />
+
+        {results.length > 0 && hasMore && (
+          <div className="load-more-container">
+            <button onClick={handleLoadMore} disabled={loading} className="load-more-btn">
+              {loading ? 'Cargando...' : 'Cargar más resultados'}
+            </button>
+          </div>
+        )}
 
         {currentTrack && (
           <Player
             track={currentTrack}
+            queue={queue}
+            onPlayNext={handlePlayNext}
+            onPlayPrevious={handlePlayPrevious}
             onClose={() => setCurrentTrack(null)}
           />
         )}

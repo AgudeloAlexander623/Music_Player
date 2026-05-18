@@ -8,10 +8,11 @@ class MusicBrainzServiceError extends Error {
   }
 }
 
-export async function searchMusicBrainz(query) {
+export async function searchMusicBrainz(query, limit = 10) {
   try {
+    const searchLimit = Math.min(limit, 25);
     const res = await axios.get(
-      `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(query)}&fmt=json&limit=10`,
+      `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(query)}&fmt=json&limit=${searchLimit}`,
       {
         headers: {
           'User-Agent': 'Reproductor-App/1.0',
