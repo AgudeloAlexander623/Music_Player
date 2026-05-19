@@ -76,8 +76,8 @@ services:
 
   frontend:
     build:
-      context: ../FrontEnd/mi-app
-      dockerfile: ../docker/Dockerfile.frontend
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/api}
     container_name: reproductor-frontend

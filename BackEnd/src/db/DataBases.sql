@@ -143,14 +143,7 @@ CREATE TABLE IF NOT EXISTS `playlist_tracks` (
 -- Por ahora, JWT es stateless, no requiere tabla de sesiones
 
 -- ===========================================
--- ÍNDICES ADICIONALES PARA PERFORMANCE
--- ===========================================
-
--- Búsquedas rápidas por usuario en favoritos y playlists
-ALTER TABLE `users` ADD UNIQUE KEY `unique_email` (`email`);
-
--- ===========================================
--- COMENTARIOS Y QUERIES DE REFERENCIA
+| COMENTARIOS Y QUERIES DE REFERENCIA
 -- ===========================================
 
 -- Ver todos los usuarios
