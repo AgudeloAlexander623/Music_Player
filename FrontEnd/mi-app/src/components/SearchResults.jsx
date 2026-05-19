@@ -3,6 +3,16 @@ import { useToast } from './Toast';
 import api from '../services/api';
 import './SearchResults.css';
 
+/**
+ * Componente que muestra los resultados de búsqueda musical.
+ *
+ * Permite filtrar por fuente (Spotify, MusicBrainz, FMA), reproducir
+ * tracks, agregar a favoritos y a playlists.
+ *
+ * @param {Array} results - Lista de tracks obtenidos de la búsqueda
+ * @param {Function} onPlay - Callback para reproducir un track
+ * @param {Function} onAddFavorite - Callback para agregar a favoritos
+ */
 export default function SearchResults({ results, onPlay, onAddFavorite }) {
   const [filter, setFilter] = useState('all');
   const [playlistMenuId, setPlaylistMenuId] = useState(null);
@@ -91,8 +101,19 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
               </div>
             </div>
             <div className="track-actions">
-              <button className="track-btn" onClick={() => onPlay(track)} title="Reproducir">
-                ▶️
+              {/**
+               * El botón de play se deshabilita si el track no tiene previewUrl.
+               * Esto evita que el usuario intente reproducir algo que no suena.
+               * Spotify ya no devuelve previews y MusicBrainz es solo metadata.
+               * Solo FMA y algunos tracks antiguos de Spotify tienen audio.
+               */}
+              <button
+                className={`track-btn ${!track.previewUrl ? 'track-btn-disabled' : ''}`}
+                onClick={() => track.previewUrl && onPlay(track)}
+                disabled={!track.previewUrl}
+                title={track.previewUrl ? 'Reproducir' : 'Sin preview disponible'}
+              >
+                {track.previewUrl ? '▶️' : '🔇'}
               </button>
               <button className="track-btn" onClick={() => onAddFavorite(track)} title="Agregar a favoritos">
                 ❤️

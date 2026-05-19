@@ -8,6 +8,14 @@ class MusicBrainzServiceError extends Error {
   }
 }
 
+/**
+ * Busca grabaciones en MusicBrainz por término de búsqueda.
+ *
+ * @param {string} query - Término de búsqueda (artista, canción, etc.)
+ * @param {number} limit - Cantidad máxima de resultados (máx. 25)
+ * @returns {Promise<Array<Object>>} Lista de tracks con metadata completa
+ * @throws {MusicBrainzServiceError} Si la API falla o hay timeout
+ */
 export async function searchMusicBrainz(query, limit = 10) {
   try {
     const searchLimit = Math.min(limit, 25);
@@ -25,12 +33,24 @@ export async function searchMusicBrainz(query, limit = 10) {
       return [];
     }
 
-    return res.data.recordings.map((track) => ({
-      id: track.id,
-      name: track.title,
-      artist: track['artist-credit']?.[0]?.name ?? 'Unknown',
-      source: 'musicbrainz',
-    }));
+    return res.data.recordings.map((track) => {
+      /** Extrae el primer álbum disponible si existe */
+      const album = track.releases?.[0]?.title ?? "";
+      /** Extrae la portada del primer release si existe */
+      const albumImage = track.releases?.[0]?.['cover-art-archive']?.artwork
+        ? `https://coverartarchive.org/release/${track.releases[0].id}/front`
+        : "";
+
+      return {
+        id: track.id,
+        name: track.title,
+        artist: track['artist-credit']?.[0]?.name ?? 'Unknown',
+        album,
+        albumImage,
+        previewUrl: null,
+        source: 'musicbrainz',
+      };
+    });
   } catch (error) {
     if (error instanceof MusicBrainzServiceError) {
       throw error;

@@ -1,12 +1,32 @@
+/**
+ * Fusiona resultados de múltiples fuentes musicales (Spotify, MusicBrainz, FMA).
+ *
+ * Evita duplicados comparando nombre y artista entre fuentes.
+ * Cada resultado recibe un identificador único por fuente para tracking.
+ *
+ * @param {Array<Object>} spotify - Resultados de Spotify
+ * @param {Array<Object>} musicbrainz - Resultados de MusicBrainz
+ * @param {Array<Object>} fma - Resultados de Free Music Archive (opcional)
+ * @returns {Array<Object>} Lista combinada sin duplicados
+ */
 export function mergeResults(spotify, musicbrainz, fma = []) {
   const results = [];
   const seenIds = new Set();
 
+  /**
+   * Normaliza un string para comparación segura.
+   * Convierte a minúsculas y elimina espacios extra.
+   *
+   * @param {string|undefined} value - Valor a normalizar
+   * @returns {string} String normalizado o vacío
+   */
+  const normalize = (value) => (value ?? "").trim().toLowerCase();
+
   spotify.forEach((sp) => {
     const match = musicbrainz.find(
       (mb) =>
-        mb.name.toLowerCase() === sp.name.toLowerCase() &&
-        mb.artist.toLowerCase() === sp.artist.toLowerCase()
+        normalize(mb.name) === normalize(sp.name) &&
+        normalize(mb.artist) === normalize(sp.artist)
     );
     const key = `spotify-${sp.id}`;
     if (!seenIds.has(key)) {

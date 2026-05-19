@@ -59,9 +59,9 @@ export const addFavorite = async (req, res) => {
       throw new FavoritesControllerError('Missing required fields: external_track_id, source, track_title', 400);
     }
 
-    // Validar source
-    if (!['spotify', 'musicbrainz'].includes(source)) {
-      throw new FavoritesControllerError('Invalid source. Must be "spotify" or "musicbrainz"', 400);
+    // Validar source (FMA = música libre de derechos)
+    if (!['spotify', 'musicbrainz', 'fma'].includes(source)) {
+      throw new FavoritesControllerError('Invalid source. Must be "spotify", "musicbrainz", or "fma"', 400);
     }
 
     // Verificar si ya existe el favorito

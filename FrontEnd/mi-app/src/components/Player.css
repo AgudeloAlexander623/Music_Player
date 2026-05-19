@@ -49,6 +49,12 @@
   text-overflow: ellipsis;
 }
 
+.player-error {
+  font-size: 11px;
+  color: #e87676;
+  margin-top: 2px;
+}
+
 .player-center {
   display: flex;
   flex-direction: column;

@@ -2,14 +2,34 @@ version: "3.9"
 
 services:
   mysql:
-    extends:
-      file: docker-compose.yml
-      service: mysql
+    image: mysql:8.0
+    container_name: reproductor-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-reproductor_db}
+      MYSQL_USER: ${DB_USER:-reproductor_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-reproductor_pass}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../BackEnd/src/db/DataBases.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - reproductor-network
 
   backend:
     build:
       context: ../BackEnd
       dockerfile: ../docker/Dockerfile.backend
+      args:
+        NODE_ENV: development
     container_name: reproductor-backend-dev
     restart: unless-stopped
     depends_on:
@@ -46,7 +66,7 @@ services:
     depends_on:
       - backend
     environment:
-      - VITE_API_URL=http://localhost:${BACKEND_PORT:-4000}/api
+      - VITE_API_URL=http://backend:4000/api
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     volumes:

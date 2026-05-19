@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS `favorite_tracks` (
     `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `user_id` INT NOT NULL,
     `external_track_id` VARCHAR(255) NOT NULL,
-    `source` ENUM('spotify', 'musicbrainz') NOT NULL,
+    `source` ENUM('spotify', 'musicbrainz', 'fma') NOT NULL,
     `track_title` VARCHAR(255) NOT NULL,
     `artist` VARCHAR(255),
     `album` VARCHAR(255),
@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS `playlist_tracks` (
     `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `playlist_id` INT NOT NULL,
     `external_track_id` VARCHAR(255) NOT NULL,
-    `source` ENUM('spotify', 'musicbrainz') NOT NULL,
+    `source` ENUM('spotify', 'musicbrainz', 'fma') NOT NULL,
     `track_title` VARCHAR(255) NOT NULL,
     `artist` VARCHAR(255),
     `album` VARCHAR(255),
@@ -143,7 +143,7 @@ CREATE TABLE IF NOT EXISTS `playlist_tracks` (
 -- Por ahora, JWT es stateless, no requiere tabla de sesiones
 
 -- ===========================================
-| COMENTARIOS Y QUERIES DE REFERENCIA
+-- COMENTARIOS Y QUERIES DE REFERENCIA
 -- ===========================================
 
 -- Ver todos los usuarios

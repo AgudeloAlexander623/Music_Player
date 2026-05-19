@@ -131,6 +131,16 @@
   background: #e0e0e0;
 }
 
+/** Estilo para botones deshabilitados (sin preview disponible) */
+.track-btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.track-btn-disabled:hover {
+  background: transparent;
+}
+
 .track-playlist-dropdown {
   position: relative;
 }
