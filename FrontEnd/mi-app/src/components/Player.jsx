@@ -1,64 +1,76 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import './Player.css';
 
-/**
- * Reproductor de audio principal.
- *
- * Maneja la reproducción de previews musicales desde múltiples fuentes
- * (Spotify, FMA, etc.). Incluye controles de play/pause, seek, volumen
- * y navegación por cola de reproducción.
- *
- * @param {Object} track - Track actual a reproducir
- * @param {Array} queue - Cola de tracks para navegación siguiente/anterior
- * @param {Function} onPlayNext - Callback para reproducir siguiente track
- * @param {Function} onPlayPrevious - Callback para reproducir track anterior
- * @param {Function} onClose - Callback para cerrar el reproductor
- */
+const VOLUME_KEY = 'reproductor_volume';
+
+function loadVolume() {
+  try {
+    const saved = localStorage.getItem(VOLUME_KEY);
+    if (saved !== null) {
+      const v = parseFloat(saved);
+      return v >= 0 && v <= 1 ? v : 0.7;
+    }
+  } catch {
+    return 0.7;
+  }
+  return 0.7;
+}
+
+function saveVolume(v) {
+  try { localStorage.setItem(VOLUME_KEY, String(v)); } catch { /* localStorage no disponible */ }
+}
+
 export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, onClose }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.7);
+  const [volume, setVolume] = useState(loadVolume);
   const [isMuted, setIsMuted] = useState(false);
+  const [repeatMode, setRepeatMode] = useState('off');
+  const [shuffleMode, setShuffleMode] = useState(false);
   const [audioError, setAudioError] = useState(null);
   const audioRef = useRef(null);
   const progressRef = useRef(null);
   const animationRef = useRef(null);
+  const prevVolumeRef = useRef(loadVolume());
 
-  const hasQueue = queue.length > 0;
   const currentIndex = track ? queue.findIndex((t) => t.id === track.id && t.source === track.source) : -1;
   const hasNext = currentIndex >= 0 && currentIndex < queue.length - 1;
   const hasPrev = currentIndex > 0;
 
-  /** Inicializa el objeto Audio una sola vez al montar el componente */
   useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-      audioRef.current.volume = volume;
-    }
-
+    const audio = new Audio();
+    audio.volume = isMuted ? 0 : volume;
+    audioRef.current = audio;
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-      }
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      audio.pause();
+      audio.src = '';
+      audio.load();
+      audioRef.current = null;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const updateProgressRef = useRef(null);
+
+  useEffect(() => {
+    updateProgressRef.current = () => {
+      if (!audioRef.current) return;
+      setCurrentTime(audioRef.current.currentTime);
+      animationRef.current = requestAnimationFrame(updateProgressRef.current);
     };
   }, []);
 
-  /** Carga un nuevo track cuando cambia la canción actual */
   useEffect(() => {
     if (!audioRef.current || !track?.previewUrl) return;
 
     const audio = audioRef.current;
+    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    setCurrentTime(0);
+    setDuration(0);
     setAudioError(null);
+    setIsPlaying(false);
 
-    /**
-     * Maneja errores de carga del audio (URL inválida, CORS, formato no soportado).
-     * Informa al usuario en lugar de fallar silenciosamente.
-     */
     const onError = () => {
       setAudioError('No se pudo reproducir este preview');
       setIsPlaying(false);
@@ -70,20 +82,24 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
       setDuration(audio.duration || 0);
     };
 
-    /** Al terminar, avanza automáticamente al siguiente track si existe */
     const onEnded = () => {
       setIsPlaying(false);
       setCurrentTime(0);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      if (hasNext && onPlayNext) {
+      if (repeatMode === 'one') {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+        setIsPlaying(true);
+        animationRef.current = requestAnimationFrame(updateProgressRef.current);
+      } else if (hasNext && onPlayNext) {
+        onPlayNext();
+      } else if (repeatMode === 'all' && onPlayNext) {
         onPlayNext();
       }
     };
 
     audio.src = track.previewUrl;
     audio.load();
-    setCurrentTime(0);
-    setIsPlaying(false);
 
     audio.addEventListener('error', onError);
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
@@ -94,32 +110,20 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
       audio.removeEventListener('ended', onEnded);
     };
-  }, [track]);
+  }, [track, repeatMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Actualiza la barra de progreso frame a frame */
-  const updateProgress = useCallback(() => {
-    if (!audioRef.current) return;
-    setCurrentTime(audioRef.current.currentTime);
-    animationRef.current = requestAnimationFrame(updateProgress);
-  }, []);
-
-  /** Alterna entre reproducir y pausar el track actual */
   const togglePlay = useCallback(() => {
     if (!audioRef.current || !track?.previewUrl) return;
 
     if (isPlaying) {
       audioRef.current.pause();
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      setIsPlaying(false);
     } else {
-      /**
-       * play() retorna una promesa que puede rechazarse si:
-       * - La URL del audio es inválida
-       * - El navegador bloquea autoplay sin interacción del usuario
-       * - El formato no es soportado
-       */
       audioRef.current.play()
         .then(() => {
-          animationRef.current = requestAnimationFrame(updateProgress);
+          animationRef.current = requestAnimationFrame(updateProgressRef.current);
+          setIsPlaying(true);
         })
         .catch((err) => {
           console.error('Play failed:', err);
@@ -127,10 +131,8 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
           setIsPlaying(false);
         });
     }
-    setIsPlaying(!isPlaying);
-  }, [isPlaying, track, updateProgress]);
+  }, [isPlaying, track]);
 
-  /** Permite al usuario saltar a un punto específico del track */
   const handleSeek = useCallback((e) => {
     if (!audioRef.current || !duration) return;
     const rect = progressRef.current.getBoundingClientRect();
@@ -139,39 +141,62 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
     setCurrentTime(percent * duration);
   }, [duration]);
 
-  /** Controla el volumen desde el slider */
   const handleVolumeChange = useCallback((e) => {
     const value = parseFloat(e.target.value);
     setVolume(value);
+    saveVolume(value);
     if (audioRef.current) {
       audioRef.current.volume = value;
+    }
+    if (value > 0) {
+      prevVolumeRef.current = value;
     }
     setIsMuted(value === 0);
   }, []);
 
-  /** Alterna entre silenciar y restaurar el volumen */
   const toggleMute = useCallback(() => {
     if (!audioRef.current) return;
     if (isMuted) {
-      audioRef.current.volume = volume || 0.7;
+      const restore = prevVolumeRef.current;
+      audioRef.current.volume = restore;
+      setVolume(restore);
       setIsMuted(false);
     } else {
+      prevVolumeRef.current = volume;
       audioRef.current.volume = 0;
+      setVolume(0);
       setIsMuted(true);
     }
   }, [isMuted, volume]);
 
-  /** Avanza al siguiente track en la cola */
   const handleNext = useCallback(() => {
     if (hasNext && onPlayNext) onPlayNext();
   }, [hasNext, onPlayNext]);
 
-  /** Retrocede al track anterior en la cola */
   const handlePrevious = useCallback(() => {
     if (hasPrev && onPlayPrevious) onPlayPrevious();
   }, [hasPrev, onPlayPrevious]);
 
-  /** Formatea segundos a formato mm:ss */
+  const toggleRepeat = useCallback(() => {
+    setRepeatMode(prev => prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off');
+  }, []);
+
+  const toggleShuffle = useCallback(() => {
+    setShuffleMode(prev => !prev);
+  }, []);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      togglePlay();
+    }
+  }, [togglePlay]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
   const formatTime = (seconds) => {
     if (!seconds || isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -196,14 +221,7 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
 
       <div className="player-center">
         <div className="player-main-controls">
-          <button
-            className="player-control-btn"
-            onClick={handlePrevious}
-            disabled={!hasPrev}
-            title="Anterior"
-          >
-            ⏮
-          </button>
+          <button className="player-control-btn" onClick={handlePrevious} disabled={!hasPrev} title="Anterior">⏮</button>
           <button
             className="player-play-btn"
             onClick={togglePlay}
@@ -212,14 +230,7 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
           >
             {isPlaying ? '⏸' : '▶'}
           </button>
-          <button
-            className="player-control-btn"
-            onClick={handleNext}
-            disabled={!hasNext}
-            title="Siguiente"
-          >
-            ⏭
-          </button>
+          <button className="player-control-btn" onClick={handleNext} disabled={!hasNext} title="Siguiente">⏭</button>
         </div>
 
         <div className="player-progress" ref={progressRef} onClick={handleSeek}>
@@ -232,27 +243,33 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
       </div>
 
       <div className="player-right">
-        {!track.previewUrl && (
-          <span className="player-no-preview">Sin preview</span>
-        )}
+        <button
+          className={`player-mode-btn ${shuffleMode ? 'active' : ''}`}
+          onClick={toggleShuffle}
+          title={shuffleMode ? 'Aleatorio activo' : 'Aleatorio'}
+        >
+          🔀
+        </button>
+        <button
+          className={`player-mode-btn ${repeatMode !== 'off' ? 'active' : ''}`}
+          onClick={toggleRepeat}
+          title={repeatMode === 'one' ? 'Repetir uno' : repeatMode === 'all' ? 'Repetir todo' : 'Repetir'}
+        >
+          {repeatMode === 'one' ? '🔂' : '🔁'}
+        </button>
+        {!track.previewUrl && <span className="player-no-preview">Sin preview</span>}
         <div className="player-volume">
           <button className="player-volume-btn" onClick={toggleMute} title={isMuted ? 'Activar sonido' : 'Silenciar'}>
             {isMuted || volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
           </button>
           <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
+            type="range" min="0" max="1" step="0.01"
             value={isMuted ? 0 : volume}
             onChange={handleVolumeChange}
-            className="player-volume-slider"
-            title="Volumen"
+            className="player-volume-slider" title="Volumen"
           />
         </div>
-        <button className="player-close-btn" onClick={onClose} title="Cerrar">
-          ✕
-        </button>
+        <button className="player-close-btn" onClick={onClose} title="Cerrar">✕</button>
       </div>
     </div>
   );

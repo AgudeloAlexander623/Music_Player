@@ -52,7 +52,7 @@ class FavoritesControllerError extends Error {
 export const addFavorite = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { external_track_id, source, track_title, artist, album, preview_url } = req.body;
+    const { external_track_id, source, track_title, artist, album, album_image, preview_url } = req.body;
 
     // Validar campos requeridos
     if (!external_track_id || !source || !track_title) {
@@ -83,6 +83,7 @@ export const addFavorite = async (req, res) => {
       track_title,
       artist: artist || null,
       album: album || null,
+      album_image: album_image || null,
       preview_url: preview_url || null
     });
 

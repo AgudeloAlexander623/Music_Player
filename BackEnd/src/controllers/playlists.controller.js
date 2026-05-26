@@ -288,7 +288,7 @@ export const addTrackToPlaylist = async (req, res) => {
   try {
     const userId = req.user.userId;
     const playlistId = parseInt(req.params.id);
-    const { external_track_id, source, track_title, artist, album, preview_url } = req.body;
+    const { external_track_id, source, track_title, artist, album, album_image, preview_url } = req.body;
 
     // Validar ID de playlist
     if (isNaN(playlistId)) {
@@ -324,16 +324,16 @@ export const addTrackToPlaylist = async (req, res) => {
       track_title,
       artist: artist || null,
       album: album || null,
+      album_image: album_image || null,
       preview_url: preview_url || null
     });
 
-    // Obtener el track agregado
-    const track = await findOne('playlist_tracks', { id: result.insertId });
+    const newTrack = await findOne('playlist_tracks', { id: result.insertId });
 
     res.status(201).json({
       success: true,
       message: 'Track added to playlist',
-      track
+      track: newTrack
     });
 
   } catch (error) {

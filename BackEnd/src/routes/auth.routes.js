@@ -1,16 +1,5 @@
-/**
- * RUTAS DE AUTENTICACIÓN
- *
- * Define los endpoints REST para:
- * - Registro de usuarios
- * - Login
- * - Verificación de tokens
- *
- * Todas las rutas son públicas (sin middleware JWT)
- * El middleware se aplica en rutas protegidas
- */
-
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import {
   register,
   login,
@@ -19,43 +8,18 @@ import {
 
 const router = express.Router();
 
-/**
- * POST /api/auth/register
- * Crear nueva cuenta de usuario
- *
- * Body:
- * {
- *   "email": "user@example.com",
- *   "password": "securePassword123"
- * }
- *
- * Respuesta: { success, token, user }
- */
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.use(authLimiter);
+
 router.post('/register', register);
-
-/**
- * POST /api/auth/login
- * Iniciar sesión con email y contraseña
- *
- * Body:
- * {
- *   "email": "user@example.com",
- *   "password": "securePassword123"
- * }
- *
- * Respuesta: { success, token, user }
- */
 router.post('/login', login);
-
-/**
- * POST /api/auth/verify
- * Verificar que un token JWT es válido
- *
- * Headers:
- * Authorization: Bearer <token>
- *
- * Respuesta: { success, user }
- */
 router.post('/verify', verifyTokenEndpoint);
 
 export default router;

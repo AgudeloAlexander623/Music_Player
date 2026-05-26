@@ -1,30 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useToast } from './Toast';
 import api from '../services/api';
 import './SearchResults.css';
 
-/**
- * Componente que muestra los resultados de búsqueda musical.
- *
- * Permite filtrar por fuente (Spotify, MusicBrainz, FMA), reproducir
- * tracks, agregar a favoritos y a playlists.
- *
- * @param {Array} results - Lista de tracks obtenidos de la búsqueda
- * @param {Function} onPlay - Callback para reproducir un track
- * @param {Function} onAddFavorite - Callback para agregar a favoritos
- */
 export default function SearchResults({ results, onPlay, onAddFavorite }) {
   const [filter, setFilter] = useState('all');
   const [playlistMenuId, setPlaylistMenuId] = useState(null);
   const [userPlaylists, setUserPlaylists] = useState([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
+  const menuRef = useRef(null);
   const toast = useToast();
-
-  useEffect(() => {
-    if (playlistMenuId !== null && userPlaylists.length === 0) {
-      loadPlaylists();
-    }
-  }, [playlistMenuId]);
 
   const loadPlaylists = async () => {
     setLoadingPlaylists(true);
@@ -38,6 +23,23 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
     }
   };
 
+  useEffect(() => {
+    if (playlistMenuId !== null && userPlaylists.length === 0) {
+      loadPlaylists();
+    }
+  }, [playlistMenuId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!playlistMenuId) return;
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setPlaylistMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [playlistMenuId]);
+
   const handleAddToPlaylist = async (track, playlistId) => {
     try {
       await api.post(`/playlists/${playlistId}/tracks`, {
@@ -46,6 +48,7 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
         track_title: track.name,
         artist: track.artist,
         album: track.album,
+        album_image: track.albumImage,
         preview_url: track.previewUrl,
       });
       toast.success('Agregado a la playlist');
@@ -127,7 +130,7 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
                   📋
                 </button>
                 {playlistMenuId === track.id && (
-                  <div className="playlist-dropdown-menu">
+                  <div className="playlist-dropdown-menu" ref={menuRef}>
                     {loadingPlaylists ? (
                       <span className="dropdown-loading">Cargando...</span>
                     ) : userPlaylists.length === 0 ? (

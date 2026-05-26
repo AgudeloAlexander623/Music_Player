@@ -8,6 +8,7 @@ export default function Favorites() {
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTrack, setCurrentTrack] = useState(null);
+  const [queue, setQueue] = useState([]);
   const toast = useToast();
 
   const loadFavorites = useCallback(async () => {
@@ -35,16 +36,35 @@ export default function Favorites() {
     }
   };
 
-  const handlePlay = (track) => {
-    setCurrentTrack({
-      id: track.external_track_id,
-      name: track.track_title,
-      artist: track.artist,
-      album: track.album,
-      albumImage: null,
-      previewUrl: track.preview_url,
-      source: track.source,
-    });
+  const mapFavoriteToTrack = (fav) => ({
+    id: fav.external_track_id,
+    name: fav.track_title,
+    artist: fav.artist,
+    album: fav.album,
+    albumImage: fav.album_image || null,
+    previewUrl: fav.preview_url,
+    source: fav.source,
+  });
+
+  const handlePlay = (fav) => {
+    setQueue(favorites.map(mapFavoriteToTrack));
+    setCurrentTrack(mapFavoriteToTrack(fav));
+  };
+
+  const handlePlayNext = () => {
+    if (!currentTrack) return;
+    const idx = queue.findIndex((t) => t.id === currentTrack.id && t.source === currentTrack.source);
+    if (idx >= 0 && idx < queue.length - 1) {
+      setCurrentTrack(queue[idx + 1]);
+    }
+  };
+
+  const handlePlayPrevious = () => {
+    if (!currentTrack) return;
+    const idx = queue.findIndex((t) => t.id === currentTrack.id && t.source === currentTrack.source);
+    if (idx > 0) {
+      setCurrentTrack(queue[idx - 1]);
+    }
   };
 
   return (
@@ -84,7 +104,13 @@ export default function Favorites() {
       {currentTrack && (
         <Player
           track={currentTrack}
-          onClose={() => setCurrentTrack(null)}
+          queue={queue}
+          onPlayNext={handlePlayNext}
+          onPlayPrevious={handlePlayPrevious}
+          onClose={() => {
+            setCurrentTrack(null);
+            setQueue([]);
+          }}
         />
       )}
     </div>

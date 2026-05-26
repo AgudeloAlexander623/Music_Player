@@ -3,7 +3,6 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
@@ -132,6 +131,11 @@ public
 # Storybook build outputs
 .out
 .storybook-out
+
+# Python
+python-services/venv/
+__pycache__/
+*.pyc
 
 # Temporary folders
 tmp/

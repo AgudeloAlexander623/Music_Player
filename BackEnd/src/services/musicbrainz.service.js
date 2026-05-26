@@ -8,16 +8,22 @@ class MusicBrainzServiceError extends Error {
   }
 }
 
-/**
- * Busca grabaciones en MusicBrainz por término de búsqueda.
- *
- * @param {string} query - Término de búsqueda (artista, canción, etc.)
- * @param {number} limit - Cantidad máxima de resultados (máx. 25)
- * @returns {Promise<Array<Object>>} Lista de tracks con metadata completa
- * @throws {MusicBrainzServiceError} Si la API falla o hay timeout
- */
+let lastRequestTime = 0;
+const MIN_INTERVAL_MS = 1100;
+
+async function rateLimit() {
+  const now = Date.now();
+  const elapsed = now - lastRequestTime;
+  if (elapsed < MIN_INTERVAL_MS) {
+    await new Promise(resolve => setTimeout(resolve, MIN_INTERVAL_MS - elapsed));
+  }
+  lastRequestTime = Date.now();
+}
+
 export async function searchMusicBrainz(query, limit = 10) {
   try {
+    await rateLimit();
+
     const searchLimit = Math.min(limit, 25);
     const res = await axios.get(
       `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(query)}&fmt=json&limit=${searchLimit}`,
@@ -34,9 +40,7 @@ export async function searchMusicBrainz(query, limit = 10) {
     }
 
     return res.data.recordings.map((track) => {
-      /** Extrae el primer álbum disponible si existe */
       const album = track.releases?.[0]?.title ?? "";
-      /** Extrae la portada del primer release si existe */
       const albumImage = track.releases?.[0]?.['cover-art-archive']?.artwork
         ? `https://coverartarchive.org/release/${track.releases[0].id}/front`
         : "";

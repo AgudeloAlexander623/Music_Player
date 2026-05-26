@@ -20,6 +20,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({ status: "ok", service: "backend" });
+});
+
 app.use("/api/search", searchRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/favorites", favoritesRoutes);
@@ -39,6 +43,7 @@ async function start() {
 
   app.listen(PORT, () => {
     console.log(`\n🚀 Servidor corriendo en puerto ${PORT}`);
+    console.log(`💚 Health: http://localhost:${PORT}/api/health`);
     console.log(`🎵 Búsqueda: http://localhost:${PORT}/api/search`);
     console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
     console.log(`⭐ Favoritos: http://localhost:${PORT}/api/favorites`);

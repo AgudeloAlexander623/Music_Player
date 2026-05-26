@@ -71,8 +71,8 @@ export const searchController = async (req, res) => {
       console.error(`[FMA Error] ${error.message}`);
     }
 
-    const activeServices = [spotifyError, musicBrainzError, fmaError].filter(Boolean).length;
-    if (activeServices === 3) {
+    const failedCount = [spotifyError, musicBrainzError, fmaError].filter(Boolean).length;
+    if (failedCount === 3) {
       return res.status(500).json({
         error: "All search services failed",
         details: {
@@ -83,15 +83,7 @@ export const searchController = async (req, res) => {
       });
     }
 
-    let finalResults = [];
-
-    if (spotifyError && musicBrainzError && fmaError) {
-      return res.status(500).json({
-        error: "All search services failed",
-      });
-    }
-
-    finalResults = mergeResults(spotifyResults, musicBrainzResults, fmaResults);
+    const finalResults = mergeResults(spotifyResults, musicBrainzResults, fmaResults);
 
     if (req.user) {
       try {

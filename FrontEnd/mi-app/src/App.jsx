@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { useToast } from './components/Toast';
 import api from './services/api';
+import { setNavigate } from './services/navigate.js';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -54,8 +55,7 @@ function Home() {
   };
 
   const handlePlay = (track) => {
-    const trackQueue = results.filter((t) => t.previewUrl);
-    setQueue(trackQueue);
+    setQueue(results);
     setCurrentTrack(track);
   };
 
@@ -81,6 +81,7 @@ function Home() {
         track_title: track.name,
         artist: track.artist,
         album: track.album,
+        album_image: track.albumImage,
         preview_url: track.previewUrl,
       });
       toast.success('Agregado a favoritos');
@@ -134,10 +135,18 @@ function Home() {
   );
 }
 
+function NavigateSetter() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    setNavigate(navigate);
+  }, [navigate]);
+  return null;
+}
+
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
 
-  if (loading) return <div>Cargando...</div>;
+  if (loading) return <div className="auth-container"><p>Verificando sesión...</p></div>;
 
   return user ? children : <Navigate to="/login" />;
 }
@@ -145,6 +154,7 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <NavigateSetter />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

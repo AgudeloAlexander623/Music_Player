@@ -92,6 +92,7 @@ export default function Playlists() {
       return;
     }
     try {
+      setTracks([]);
       const res = await api.get(`/playlists/${id}/tracks`);
       setTracks(res.data.tracks || []);
       setExpandedId(id);
@@ -106,7 +107,7 @@ export default function Playlists() {
       name: track.track_title,
       artist: track.artist,
       album: track.album,
-      albumImage: null,
+      albumImage: track.album_image || null,
       previewUrl: track.preview_url,
       source: track.source,
     };
@@ -115,7 +116,7 @@ export default function Playlists() {
       name: t.track_title,
       artist: t.artist,
       album: t.album,
-      albumImage: null,
+      albumImage: t.album_image || null,
       previewUrl: t.preview_url,
       source: t.source,
     }));

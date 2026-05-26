@@ -1,31 +1,15 @@
-/**
- * POOL DE CONEXIONES A MYSQL
- *
- * Gestiona conexiones reutilizables a la base de datos
- * - Crea un pool de conexiones (evita crear nueva conexión cada query)
- * - Reutiliza conexiones existentes
- * - Maneja timeouts y errores de conexión
- * - Proporciona métodos helper para ejecutar queries
- *
- * VENTAJAS DEL POOL:
- * ✅ Mejor performance (reusar conexiones es más rápido)
- * ✅ Menos carga en servidor MySQL
- * ✅ Manejo automático de reconexiones
- * ✅ Control de número máximo de conexiones simultáneas
- *
- * USO:
- * import { executeQuery, getConnection } from '../db/database.js';
- *
- * const results = await executeQuery(
- *   'SELECT * FROM users WHERE email = ?',
- *   [email]
- * );
- */
-
 import mysql from 'mysql2/promise';
 
-// Pool global de conexiones
+const IDENTIFIER_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
 let pool = null;
+
+function sanitizeIdentifier(name, context) {
+  if (!IDENTIFIER_RE.test(name)) {
+    throw new Error(`Invalid ${context}: "${name}"`);
+  }
+  return name;
+}
 
 /**
  * INICIALIZAR POOL DE CONEXIONES
@@ -187,20 +171,14 @@ export async function closeDatabase() {
   }
 }
 
-/**
- * HELPER: Insertar un registro
- *
- * Shortcut para INSERT
- *
- * RETORNA: { insertId, affectedRows }
- */
 export async function insert(table, data) {
   try {
-    const columns = Object.keys(data);
+    const safeTable = sanitizeIdentifier(table, 'table name');
+    const columns = Object.keys(data).map(col => sanitizeIdentifier(col, 'column name'));
     const values = Object.values(data);
     const placeholders = columns.map(() => '?').join(', ');
 
-    const sql = `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders})`;
+    const sql = `INSERT INTO ${safeTable} (${columns.join(', ')}) VALUES (${placeholders})`;
     const result = await executeQuery(sql, values);
 
     return {
@@ -226,14 +204,14 @@ export async function insert(table, data) {
  */
 export async function update(table, data, where) {
   try {
-    const setClause = Object.keys(data)
-      .map(key => `${key} = ?`)
-      .join(', ');
-    const whereClause = Object.keys(where)
-      .map(key => `${key} = ?`)
-      .join(' AND ');
+    const safeTable = sanitizeIdentifier(table, 'table name');
+    const setKeys = Object.keys(data).map(col => sanitizeIdentifier(col, 'column name'));
+    const whereKeys = Object.keys(where).map(col => sanitizeIdentifier(col, 'column name'));
 
-    const sql = `UPDATE ${table} SET ${setClause} WHERE ${whereClause}`;
+    const setClause = setKeys.map(key => `${key} = ?`).join(', ');
+    const whereClause = whereKeys.map(key => `${key} = ?`).join(' AND ');
+
+    const sql = `UPDATE ${safeTable} SET ${setClause} WHERE ${whereClause}`;
     const values = [...Object.values(data), ...Object.values(where)];
 
     const result = await executeQuery(sql, values);
@@ -260,11 +238,12 @@ export async function update(table, data, where) {
  */
 export async function remove(table, where) {
   try {
-    const whereClause = Object.keys(where)
-      .map(key => `${key} = ?`)
-      .join(' AND ');
+    const safeTable = sanitizeIdentifier(table, 'table name');
+    const whereKeys = Object.keys(where).map(col => sanitizeIdentifier(col, 'column name'));
 
-    const sql = `DELETE FROM ${table} WHERE ${whereClause}`;
+    const whereClause = whereKeys.map(key => `${key} = ?`).join(' AND ');
+
+    const sql = `DELETE FROM ${safeTable} WHERE ${whereClause}`;
     const values = Object.values(where);
 
     const result = await executeQuery(sql, values);
@@ -287,8 +266,9 @@ export async function remove(table, where) {
  */
 export async function findById(table, id) {
   try {
+    const safeTable = sanitizeIdentifier(table, 'table name');
     const results = await executeQuery(
-      `SELECT * FROM ${table} WHERE id = ?`,
+      `SELECT * FROM ${safeTable} WHERE id = ?`,
       [id]
     );
     return results.length > 0 ? results[0] : null;
@@ -308,12 +288,13 @@ export async function findById(table, id) {
  */
 export async function findOne(table, where) {
   try {
-    const whereClause = Object.keys(where)
-      .map(key => `${key} = ?`)
-      .join(' AND ');
+    const safeTable = sanitizeIdentifier(table, 'table name');
+    const whereKeys = Object.keys(where).map(col => sanitizeIdentifier(col, 'column name'));
+
+    const whereClause = whereKeys.map(key => `${key} = ?`).join(' AND ');
 
     const results = await executeQuery(
-      `SELECT * FROM ${table} WHERE ${whereClause}`,
+      `SELECT * FROM ${safeTable} WHERE ${whereClause}`,
       Object.values(where)
     );
 
@@ -334,17 +315,17 @@ export async function findOne(table, where) {
  */
 export async function findMany(table, where = {}, limit = null) {
   try {
-    let sql = `SELECT * FROM ${table}`;
+    const safeTable = sanitizeIdentifier(table, 'table name');
+    let sql = `SELECT * FROM ${safeTable}`;
 
     if (Object.keys(where).length > 0) {
-      const whereClause = Object.keys(where)
-        .map(key => `${key} = ?`)
-        .join(' AND ');
+      const whereKeys = Object.keys(where).map(col => sanitizeIdentifier(col, 'column name'));
+      const whereClause = whereKeys.map(key => `${key} = ?`).join(' AND ');
       sql += ` WHERE ${whereClause}`;
     }
 
     if (limit) {
-      sql += ` LIMIT ${limit}`;
+      sql += ` LIMIT ${parseInt(limit)}`;
     }
 
     return await executeQuery(sql, Object.values(where));

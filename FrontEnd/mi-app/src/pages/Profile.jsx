@@ -5,7 +5,7 @@ import './Profile.css';
 
 export default function Profile() {
   const { user } = useAuth();
-  const [stats, setStats] = useState({ favorites: 0, playlists: 0, searches: 0 });
+  const [stats, setStats] = useState({ favorites: 0, playlists: 0, searches: null });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,7 +18,7 @@ export default function Profile() {
         setStats({
           favorites: (favRes.data.favorites || []).length,
           playlists: (plRes.data.playlists || []).length,
-          searches: 0,
+          searches: null,
         });
       } catch (err) {
         console.error('Error al cargar estadísticas:', err);
@@ -52,7 +52,7 @@ export default function Profile() {
             <div className="profile-stat-label">Playlists</div>
           </div>
           <div className="profile-stat">
-            <div className="profile-stat-value">{stats.searches}</div>
+            <div className="profile-stat-value">{stats.searches !== null ? stats.searches : '—'}</div>
             <div className="profile-stat-label">Búsquedas</div>
           </div>
         </div>

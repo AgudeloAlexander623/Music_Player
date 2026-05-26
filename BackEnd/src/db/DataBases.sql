@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS `favorite_tracks` (
     `track_title` VARCHAR(255) NOT NULL,
     `artist` VARCHAR(255),
     `album` VARCHAR(255),
+    `album_image` TEXT,
     `preview_url` TEXT,
     `added_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
@@ -58,6 +59,10 @@ CREATE TABLE IF NOT EXISTS `favorite_tracks` (
     INDEX `idx_user_id` (`user_id`),
     INDEX `idx_added_at` (`added_at`)
 );
+
+-- Si la tabla ya existe, ejecutar manualmente:
+-- ALTER TABLE favorite_tracks ADD COLUMN album_image TEXT AFTER album;
+-- ALTER TABLE playlist_tracks ADD COLUMN album_image TEXT AFTER album;
 
 -- ===========================================
 -- TABLA: HISTORIAL DE BÚSQUEDAS
@@ -130,6 +135,7 @@ CREATE TABLE IF NOT EXISTS `playlist_tracks` (
     `track_title` VARCHAR(255) NOT NULL,
     `artist` VARCHAR(255),
     `album` VARCHAR(255),
+    `album_image` TEXT,
     `preview_url` TEXT,
     `added_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`playlist_id`) REFERENCES `playlists`(`id`) ON DELETE CASCADE,
