@@ -1,0 +1,68 @@
+.favorites-container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 28px 20px 120px;
+}
+
+.favorites-header h1 {
+  font-size: 1.75rem;
+  letter-spacing: -0.03em;
+  margin-bottom: 24px;
+}
+
+.favorites-empty {
+  text-align: center;
+  color: var(--muted);
+  margin-top: 60px;
+  font-size: 0.95rem;
+}
+
+.favorites-list {
+  display: grid;
+  gap: 8px;
+}
+
+.favorite-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.favorite-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.favorite-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.favorite-artist {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.favorite-source {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+.favorite-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 12px;
+}

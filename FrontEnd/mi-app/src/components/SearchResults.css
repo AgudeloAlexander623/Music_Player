@@ -1,0 +1,182 @@
+.search-results {
+  margin-top: 8px;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 8px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.filter-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.filter-btn:disabled {
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #091117;
+  border-color: transparent;
+}
+
+.track-list {
+  display: grid;
+  gap: 8px;
+}
+
+.track-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  transition: border-color 0.15s;
+}
+
+.track-item:hover {
+  border-color: rgba(121, 224, 197, 0.25);
+}
+
+.track-image {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.track-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.track-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-artist {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.track-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.track-source {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.source-spotify {
+  background: rgba(29, 185, 84, 0.15);
+  color: #1db954;
+}
+
+.source-musicbrainz {
+  background: rgba(186, 104, 200, 0.15);
+  color: #ba68c8;
+}
+
+.source-fma {
+  background: rgba(255, 183, 77, 0.15);
+  color: #ffb74d;
+}
+
+.track-license {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.track-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.track-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: background 0.15s;
+}
+
+.track-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.track-btn-disabled {
+  opacity: 0.4;
+}
+
+.track-playlist-dropdown {
+  position: relative;
+}
+
+.playlist-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  min-width: 180px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: var(--shadow);
+  z-index: 50;
+}
+
+.dropdown-loading,
+.dropdown-empty {
+  display: block;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: var(--text);
+  transition: background 0.1s;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
