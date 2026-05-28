@@ -1,7 +1,18 @@
+.auth-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
 .home-container {
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 24px 20px 120px;
+  margin-left: 0;
 }
 
 .search-form {
@@ -15,25 +26,39 @@
   min-height: 52px;
   padding: 0 18px;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  background: rgba(194, 90, 125, 0.08);
   color: var(--text);
   font-size: 1rem;
+  transition: all 0.2s ease;
 }
 
 .search-input:focus {
-  border-color: rgba(121, 224, 197, 0.45);
-  box-shadow: 0 0 0 4px rgba(121, 224, 197, 0.12);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(194, 90, 125, 0.15);
+  background: rgba(194, 90, 125, 0.12);
+}
+
+.search-input::placeholder {
+  color: rgba(230, 237, 243, 0.5);
 }
 
 .search-btn {
   min-height: 52px;
   padding: 0 28px;
-  border-radius: 16px;
+  border-radius: 12px;
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-  color: #091117;
+  color: white;
   font-weight: 700;
   font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.search-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(194, 90, 125, 0.3);
 }
 
 .search-btn:disabled {
@@ -48,11 +73,13 @@
 
 .load-more-btn {
   padding: 12px 32px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--line);
-  background: var(--panel);
+  background: rgba(194, 90, 125, 0.1);
   color: var(--text);
   font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .load-more-btn:disabled {
@@ -61,5 +88,29 @@
 }
 
 .load-more-btn:hover:not(:disabled) {
+  background: rgba(194, 90, 125, 0.15);
   border-color: var(--accent);
+}
+
+/* Global styles for all pages with sidebar */
+main[class*='dashboard'],
+main[class*='favorites'],
+main[class*='playlists'],
+main[class*='profile'] {
+  margin-left: 0;
+}
+
+@media (max-width: 768px) {
+  .home-container {
+    padding: 15px 10px 120px;
+  }
+
+  .search-form {
+    flex-direction: column;
+  }
+
+  .search-input,
+  .search-btn {
+    width: 100%;
+  }
 }

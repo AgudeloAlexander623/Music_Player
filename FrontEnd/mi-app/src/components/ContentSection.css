@@ -1,0 +1,229 @@
+.content-section {
+  margin-bottom: 50px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.section-title-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #e6edf3;
+  margin: 0;
+}
+
+.section-badge {
+  background: linear-gradient(135deg, rgba(194, 90, 125, 0.3), rgba(194, 90, 125, 0.15));
+  color: #e6edf3;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid rgba(194, 90, 125, 0.3);
+}
+
+.filter-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.filter-input {
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(194, 90, 125, 0.1);
+  border: 1px solid rgba(194, 90, 125, 0.3);
+  color: #e6edf3;
+  font-size: 0.9rem;
+  min-width: 200px;
+  transition: all 0.2s ease;
+}
+
+.filter-input:focus {
+  background: rgba(194, 90, 125, 0.15);
+  border-color: rgba(194, 90, 125, 0.5);
+  box-shadow: 0 0 0 3px rgba(194, 90, 125, 0.1);
+}
+
+.filter-input::placeholder {
+  color: rgba(230, 237, 243, 0.5);
+}
+
+.filter-btn {
+  padding: 8px 14px;
+  background: rgba(194, 90, 125, 0.2);
+  border: 1px solid rgba(194, 90, 125, 0.3);
+  border-radius: 8px;
+  color: #e6edf3;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.filter-btn:hover {
+  background: rgba(194, 90, 125, 0.3);
+  border-color: rgba(194, 90, 125, 0.5);
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(194, 90, 125, 0.2);
+  border: 1px solid rgba(194, 90, 125, 0.3);
+  color: #e6edf3;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-btn:hover {
+  background: rgba(194, 90, 125, 0.3);
+  border-color: rgba(194, 90, 125, 0.5);
+}
+
+.items-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 20px;
+  overflow-x: auto;
+  padding-right: 10px;
+}
+
+.item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.item-card:hover {
+  transform: translateY(-5px);
+}
+
+.item-image {
+  position: relative;
+  width: 100%;
+  padding-bottom: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  background: rgba(194, 90, 125, 0.1);
+}
+
+.item-image img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.item-card:hover .item-overlay {
+  opacity: 1;
+}
+
+.play-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c25a7d, #8b3a5c);
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.play-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(194, 90, 125, 0.5);
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e6edf3;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-subtitle {
+  font-size: 0.8rem;
+  color: rgba(230, 237, 243, 0.6);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1024px) {
+  .items-container {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-input {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .items-container {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 15px;
+  }
+}
