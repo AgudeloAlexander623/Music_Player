@@ -8,7 +8,8 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [guestLoading, setGuestLoading] = useState(false);
+  const { login, guestLogin } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -23,6 +24,19 @@ export default function Login() {
       toast.error(err.response?.data?.error || 'Error al iniciar sesión');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setGuestLoading(true);
+    try {
+      await guestLogin();
+      toast.info('Explorando como invitado');
+      navigate('/');
+    } catch {
+      toast.error('No se pudo iniciar sesión como invitado');
+    } finally {
+      setGuestLoading(false);
     }
   };
 
@@ -50,6 +64,21 @@ export default function Login() {
           {loading ? 'Cargando...' : 'Iniciar Sesión'}
         </button>
       </form>
+
+      <div className="auth-divider">
+        <span className="auth-divider-line" />
+        <span className="auth-divider-text">o</span>
+        <span className="auth-divider-line" />
+      </div>
+
+      <button
+        onClick={handleGuestLogin}
+        disabled={guestLoading}
+        className="auth-button auth-button-guest"
+      >
+        {guestLoading ? 'Cargando...' : 'Explorar como invitado'}
+      </button>
+
       <p className="auth-link">
         ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
       </p>

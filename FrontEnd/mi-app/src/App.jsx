@@ -23,6 +23,7 @@ function Home() {
   const [queue, setQueue] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const { isGuest } = useAuth();
   const toast = useToast();
 
   const handleSearch = async (e, pageNum = 1) => {
@@ -74,6 +75,10 @@ function Home() {
   };
 
   const handleAddFavorite = async (track) => {
+    if (isGuest) {
+      toast.info('Regístrate o inicia sesión para guardar favoritos');
+      return;
+    }
     try {
       await api.post('/favorites', {
         external_track_id: track.id,

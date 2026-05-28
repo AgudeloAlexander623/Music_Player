@@ -125,6 +125,57 @@ export function generateToken(userId, email) {
 }
 
 /**
+ * GENERAR TOKEN INVITADO
+ *
+ * Crea un token JWT para sesión sin registro
+ * - No requiere userId ni email
+ * - payload incluye { guest: true }
+ * - Expira en 24 horas
+ * - Permite navegación sin cuenta
+ *
+ * USO:
+ * - Frontend: modo invitado para explorar la app
+ * - Backend: endpoints mutantes rechazan guest con 403
+ *
+ * PAYLOAD:
+ * {
+ *   guest: true,
+ *   userId: null,
+ *   email: null,
+ *   iat: timestamp,
+ *   exp: timestamp
+ * }
+ */
+export function generateGuestToken() {
+  try {
+    if (!process.env.JWT_SECRET) {
+      throw new AuthServiceError(
+        'JWT_SECRET not configured in .env',
+        500
+      );
+    }
+
+    const token = jwt.sign(
+      {
+        userId: null,
+        email: null,
+        guest: true,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: '24h',
+        algorithm: 'HS256',
+      }
+    );
+
+    return token;
+  } catch (error) {
+    if (error instanceof AuthServiceError) throw error;
+    throw new AuthServiceError(`Could not generate guest token: ${error.message}`, 500);
+  }
+}
+
+/**
  * VERIFICAR TOKEN JWT
  *
  * Valida que un token JWT sea legítimo y no haya expirado

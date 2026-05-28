@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import {
   register,
   login,
+  guestLogin,
   verifyTokenEndpoint,
 } from '../controllers/auth.controller.js';
 
@@ -20,6 +21,7 @@ router.use(authLimiter);
 
 router.post('/register', register);
 router.post('/login', login);
+router.post('/guest', guestLogin);
 router.post('/verify', verifyTokenEndpoint);
 
 export default router;

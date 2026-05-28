@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import './Profile.css';
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const [stats, setStats] = useState({ favorites: 0, playlists: 0, searches: null });
   const [loading, setLoading] = useState(true);
 
@@ -29,14 +30,18 @@ export default function Profile() {
     loadStats();
   }, []);
 
-  const initial = user?.email?.charAt(0).toUpperCase() || '?';
+  const initial = isGuest ? '?' : (user?.email?.charAt(0).toUpperCase() || '?');
 
   return (
     <div className="profile-container">
       <div className="profile-card">
         <div className="profile-avatar">{initial}</div>
-        <div className="profile-email">{user?.email}</div>
-        <div className="profile-id">ID: {user?.userId || 'N/A'}</div>
+        <div className="profile-email">
+          {isGuest ? '👤 Modo Invitado' : user?.email}
+        </div>
+        <div className="profile-id">
+          {isGuest ? 'Sesión temporal' : `ID: ${user?.userId || 'N/A'}`}
+        </div>
 
         <div className="profile-stats">
           <div className="profile-stat">
@@ -61,9 +66,17 @@ export default function Profile() {
       <div className="profile-section">
         <div className="profile-section-title">Información de la cuenta</div>
         <div className="profile-section-content">
-          <p><strong>Email:</strong> {user?.email}</p>
-          <p><strong>Miembro desde:</strong> {new Date().toLocaleDateString()}</p>
-          <p><strong>Sesión:</strong> Activa (JWT 24h)</p>
+          {isGuest ? (
+            <p className="auth-link">
+              <Link to="/register">Regístrate</Link> o <Link to="/login">inicia sesión</Link> para guardar tus canciones favoritas y crear playlists.
+            </p>
+          ) : (
+            <>
+              <p><strong>Email:</strong> {user?.email}</p>
+              <p><strong>Miembro desde:</strong> {new Date().toLocaleDateString()}</p>
+              <p><strong>Sesión:</strong> Activa (JWT 24h)</p>
+            </>
+          )}
         </div>
       </div>
     </div>

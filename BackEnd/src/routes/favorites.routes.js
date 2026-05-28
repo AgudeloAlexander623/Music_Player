@@ -11,7 +11,7 @@
 
 import express from 'express';
 import { addFavorite, getFavorites, removeFavorite } from '../controllers/favorites.controller.js';
-import { verifyTokenMiddleware } from '../middleware/verifyToken.js';
+import { verifyTokenMiddleware, requireRealUser } from '../middleware/verifyToken.js';
 
 const router = express.Router();
 
@@ -22,7 +22,7 @@ router.use(verifyTokenMiddleware);
  * AGREGAR FAVORITO
  * POST /api/favorites
  */
-router.post('/', addFavorite);
+router.post('/', requireRealUser, addFavorite);
 
 /**
  * OBTENER FAVORITOS DEL USUARIO
@@ -34,6 +34,6 @@ router.get('/', getFavorites);
  * ELIMINAR FAVORITO ESPECÍFICO
  * DELETE /api/favorites/:id
  */
-router.delete('/:id', removeFavorite);
+router.delete('/:id', requireRealUser, removeFavorite);
 
 export default router;

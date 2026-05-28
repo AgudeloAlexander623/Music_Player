@@ -2,9 +2,10 @@
  * CONTROLADOR DE AUTENTICACIÓN
  *
  * Maneja los endpoints REST de autenticación:
- * - POST /api/auth/register - Crear nueva cuenta
- * - POST /api/auth/login - Iniciar sesión
- * - POST /api/auth/verify - Verificar token válido
+ * - POST /api/auth/register  - Crear nueva cuenta
+ * - POST /api/auth/login     - Iniciar sesión
+ * - POST /api/auth/verify    - Verificar token válido
+ * - POST /api/auth/guest     - Sesión de invitado (sin registro)
  *
  * INTEGRACIÓN CON BD:
  * - Usa MySQL para almacenar usuarios
@@ -16,6 +17,7 @@ import {
   hashPassword,
   comparePassword,
   generateToken,
+  generateGuestToken,
   verifyToken,
   extractTokenFromHeader,
 } from '../services/auth.service.js';
@@ -249,13 +251,14 @@ export const verifyTokenEndpoint = async (req, res) => {
     // Verificar token
     const decoded = verifyToken(token);
 
+    const user = decoded.guest
+      ? { guest: true }
+      : { userId: decoded.userId, email: decoded.email };
+
     return res.status(200).json({
       success: true,
       message: 'Token is valid',
-      user: {
-        userId: decoded.userId,
-        email: decoded.email,
-      },
+      user,
     });
   } catch (error) {
     console.error(`[Verify Token Error] ${error.message}`);
@@ -269,6 +272,55 @@ export const verifyTokenEndpoint = async (req, res) => {
 
     return res.status(500).json({
       error: 'Token verification failed',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * ENDPOINT: INICIO DE SESIÓN COMO INVITADO
+ *
+ * POST /api/auth/guest
+ * Sin body requerido
+ * No requiere registro ni autenticación previa
+ *
+ * FLUJO:
+ * 1. Genera token JWT con flag guest: true
+ * 2. No consulta BD (no necesita usuario real)
+ * 3. Retorna token con sesión limitada
+ *
+ * RESPUESTA EXITOSA (200):
+ * {
+ *   success: true,
+ *   message: "Guest session started",
+ *   token: "eyJhbGc...",
+ *   user: { guest: true }
+ * }
+ *
+ * LIMITACIONES DEL MODO INVITADO:
+ * - Puede buscar canciones y explorar la app
+ * - No puede guardar favoritos
+ * - No puede crear/modificar playlists
+ * - Los endpoints mutantes retornan 403
+ *
+ * ERRORES:
+ * - 500: Error al generar token
+ */
+export const guestLogin = async (req, res) => {
+  try {
+    const token = generateGuestToken();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Guest session started',
+      token,
+      user: { guest: true },
+    });
+  } catch (error) {
+    console.error(`[Guest Login Error] ${error.message}`);
+
+    return res.status(500).json({
+      error: 'Guest login failed',
       details: error.message,
     });
   }

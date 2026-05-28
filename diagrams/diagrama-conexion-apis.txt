@@ -1,0 +1,422 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║            DIAGRAMA DE CONEXIÓN DE APIs EXTERNAS                                ║
+║            Búsqueda Multi-Fuente: Spotify, MusicBrainz, FMA                     ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                  ARQUITECTURA GENERAL DE BÚSQUEDA                               │
+│                                                                                 │
+│  ┌──────────┐    GET /api/search?q=query&page=1&limit=10                        │
+│  │ FRONTEND │──────────────────────────────────────────────────────────┐        │
+│  │ (React)  │                                                          │        │
+│  └──────────┘    ◤ JSON Response ◥                                      │        │
+│                  │ {                                                   │        │
+│                  │   tracks: [{ id, name, artist, album,               │        │
+│                  │              albumImage, previewUrl, source }],      │        │
+│                  │   count: 15,                                        │        │
+│                  │   pagination: { page, limit },                      │        │
+│                  │   sources: { spotify: 5, musicbrainz: 5, fma: 5 }  │        │
+│                  │   warnings: [...]  (si alguna API falló)            │        │
+│                  │ }                                                   │        │
+│                  └─────────────────────────────────────────────────────┘        │
+│                                                                                 │
+│                                        ▼                                        │
+│  ┌────────────────────────────────────────────────────────────────────────┐     │
+│  │                    search.controller.js                                │     │
+│  │                                                                         │     │
+│  │  1. Validar query (mín 2 caracteres)                                   │     │
+│  │  2. Parsear page y limit (default 10, max 50)                          │     │
+│  │  3. Llamar 3 APIs EN PARALELO (cada una con try/catch individual)     │     │
+│  │  4. mergeResults() para combinar y deduplicar                          │     │
+│  │  5. Guardar historial en BD (si user autenticado)                      │     │
+│  │  6. Retornar JSON con resultados + metadatos                           │     │
+│  └────────────────────────────────────────────────────────────────────────┘     │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                  BÚSQUEDA PARALELA CON RESILIENCIA                              │
+│                                                                                 │
+│    searchController                              APIs Externas                  │
+│         │                                                                       │
+│         │  ┌─────────────────────────────────────┐                              │
+│         ├──│  try { searchSpotify(query, limit) }│──► Spotify Web API          │
+│         │  │  catch → spotifyError = {...}       │   /v1/search?q=...          │
+│         │  └─────────────────────────────────────┘                              │
+│         │                                                                       │
+│         │  ┌─────────────────────────────────────┐                              │
+│         ├──│  try { searchMusicBrainz(query,     │──► MusicBrainz API          │
+│         │  │         limit) }                    │   /ws/2/recording/?query=...│
+│         │  │  catch → musicBrainzError = {...}   │                              │
+│         │  └─────────────────────────────────────┘                              │
+│         │                                                                       │
+│         │  ┌─────────────────────────────────────┐                              │
+│         └──│  try { searchFMA(query, page,       │──► Free Music Archive       │
+│            │         limit) }                    │   /api/v1/track/search      │
+│            │  catch → fmaError = {...}           │                              │
+│            └─────────────────────────────────────┘                              │
+│                                                                                 │
+│         ▼                                                                       │
+│    ┌────────────────┐                                                           │
+│    │ ¿Las 3 fallaron?│                                                          │
+│    ├────────────────┤                                                           │
+│    │  Sí → 500      │                                                           │
+│    │  No → continuar │                                                          │
+│    └────────────────┘                                                           │
+│         │                                                                       │
+│         ▼                                                                       │
+│    ┌──────────────────┐                                                         │
+│    │ mergeResults(    │                                                         │
+│    │  spotifyResults, │                                                         │
+│    │  musicBrainzRes, │                                                         │
+│    │  fmaResults)     │                                                         │
+│    └──────────────────┘                                                         │
+│         │                                                                       │
+│         ▼                                                                       │
+│    ┌──────────────────────────────┐                                             │
+│    │ ¿req.user?                   │                                             │
+│    │ ├─ Sí: INSERT search_history │                                             │
+│    │ └─ No: omitir                │                                             │
+│    └──────────────────────────────┘                                             │
+│         │                                                                       │
+│         ▼                                                                       │
+│    ┌──────────────────────────────┐                                             │
+│    │ Status code:                 │                                             │
+│    │ ├─ 200 si todas OK           │                                             │
+│    │ └─ 206 si alguna falló       │                                             │
+│    └──────────────────────────────┘                                             │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                  SPOTIFY - FLUJO DETALLADO                                      │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+  spotify.services.js
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                                                                             │
+  │  ESTADO GLOBAL (en memoria):                                                │
+  │  ┌───────────┐  ┌───────────┐                                              │
+  │  │accessToken│  │ expiresAt │  ← Se renueva automáticamente cada 1h        │
+  │  │ = null    │  │ = 0       │                                              │
+  │  └───────────┘  └───────────┘                                              │
+  │                                                                             │
+  │  searchSpotify(query, limit)                                                │
+  │      │                                                                      │
+  │      ▼                                                                      │
+  │  ensureToken()                                                              │
+  │      │                                                                      │
+  │      ├─ ¿isTokenExpired()? ──► Sí ──► getToken()                           │
+  │      │   (Date.now() ≥ expiresAt)     │                                     │
+  │      │                              POST accounts.spotify.com/api/token    │
+  │      │                              { grant_type: "client_credentials" }   │
+  │      │                              Headers: Basic Auth (Base64)           │
+  │      │                              Timeout: 5s                            │
+  │      │                                   │                                 │
+  │      │                                   ▼                                 │
+  │      │                              accessToken = res.data.access_token    │
+  │      │                              expiresAt = Date.now() + 3600*1000     │
+  │      │◄─────────────────────────────┘                                     │
+  │      │                                                                      │
+  │      ├─ No (token válido) ──► continuar                                     │
+  │      │                                                                      │
+  │      ▼                                                                      │
+  │  GET api.spotify.com/v1/search                                              │
+  │  ?q={query}&type=track&limit={limit}                                       │
+  │  Authorization: Bearer {accessToken}                                        │
+  │  Timeout: 8s                                                                │
+  │      │                                                                      │
+  │      ▼                                                                      │
+  │  Transformar respuesta:                                                     │
+  │  Spotify format → Formato unificado del proyecto                            │
+  │                                                                             │
+  │  {                                                                          │
+  │    id: track.id,                    // "3JdR3j0KtU8k5..."                  │
+  │    name: track.name,                // "Hey Jude"                          │
+  │    artist: track.artists[0].name,   // "The Beatles"                       │
+  │    album: track.album.name,         // "Hey Jude"                          │
+  │    albumImage: track.album.images[0].url,  // URL de imagen 640x640        │
+  │    previewUrl: track.preview_url,   // URL preview 30s (puede ser null)    │
+  │    source: "spotify"                                                        │
+  │  }                                                                          │
+  │                                                                             │
+  │  MANEJO DE ERRORES:                                                         │
+  │  │                                                                          │
+  │  ├─ Sin credenciales (.env)         → 400 SpotifyServiceError             │
+  │  ├─ Error de autenticación (401/403) → SpotifyServiceError                │
+  │  ├─ Timeout (8s)                    → 408 SpotifyServiceError             │
+  │  └─ Error desconocido              → SpotifyServiceError genérico        │
+  │                                                                             │
+  └─────────────────────────────────────────────────────────────────────────────┘
+  │
+  ▼
+  🔑 DATO: Los previews de Spotify son fragmentos de 30 segundos
+           (suficiente para identificar la canción sin violar copyrights)
+
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                  MUSICBRAINZ - FLUJO DETALLADO                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+  musicbrainz.service.js
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                                                                             │
+  │  searchMusicBrainz(query, limit)                                            │
+  │      │                                                                      │
+  │      ▼                                                                      │
+  │  rateLimit()  ← REQUERIDO por MusicBrainz (máx 1 req/segundo)              │
+  │      │                                                                      │
+  │      ├─ ¿elapsed < 1100ms desde último request?                             │
+  │      │   ──► Sí → setTimeout(1100 - elapsed)                                │
+  │      │   ──► No → continuar                                                 │
+  │      │                                                                      │
+  │      ▼                                                                      │
+  │  GET musicbrainz.org/ws/2/recording/                                        │
+  │  ?query={query}&fmt=json&limit={limit}                                     │
+  │  User-Agent: 'Reproductor-App/1.0'  ← REQUERIDO por MusicBrainz            │
+  │  Timeout: 8s                                                                │
+  │      │                                                                      │
+  │      ▼                                                                      │
+  │  Transformar respuesta:                                                     │
+  │                                                                             │
+  │  {                                                                          │
+  │    id: track.id,                          // MB UUID                        │
+  │    name: track.title,                     // "Hey Jude"                     │
+  │    artist: track.artist-credit[0].name,   // "The Beatles"                  │
+  │    album: track.releases[0].title,        // "Hey Jude (single)"            │
+  │    albumImage: coverartarchive.org/...    // Puede estar vacío              │
+  │    previewUrl: null,                      // ⚠️ MusicBrainz NO da previews │
+  │    source: "musicbrainz"                                                     │
+  │  }                                                                          │
+  │                                                                             │
+  │  MANEJO DE ERRORES:                                                         │
+  │  │                                                                          │
+  │  ├─ Error de respuesta (4xx/5xx)      → MusicBrainzServiceError           │
+  │  ├─ Timeout (8s)                      → 408 MusicBrainzServiceError       │
+  │  └─ Error desconocido                 → MusicBrainzServiceError genérico  │
+  │                                                                             │
+  └─────────────────────────────────────────────────────────────────────────────┘
+  │
+  ▼
+  ⚠️ MusicBrainz NO proporciona previews de audio
+     Solo metadatos: título, artista, álbum, portada (si existe en Cover Art Archive)
+
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                  FMA (FREE MUSIC ARCHIVE) - FLUJO DETALLADO                     │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+  fma.services.js
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                                                                             │
+  │  searchFMA(query, page, limit)                                              │
+  │      │                                                                      │
+  │      ▼                                                                      │
+  │  Validar que existe FMA_API_KEY en .env                                     │
+  │      │                                                                      │
+  │      ├─ No existe → 400 FMAServiceError                                     │
+  │      │                                                                      │
+  │      ▼                                                                      │
+  │  GET freemusicarchive.org/api/v1/track/search                               │
+  │  params: { api_key, track_title, limit, offset }                           │
+  │  Timeout: 8s                                                                │
+  │      │                                                                      │
+  │      ▼                                                                      │
+  │  Transformar respuesta:                                                     │
+  │                                                                             │
+  │  {                                                                          │
+  │    id: track.track_id,               // ID interno FMA                      │
+  │    name: track.track_title,          // "Song Title"                        │
+  │    artist: track.artist_name,        // "Artist Name"                       │
+  │    album: track.album_title,         // "Album Title"                       │
+  │    albumImage: null,                 // ⚠️ FMA no provee imágenes          │
+  │    previewUrl: track.track_file,     // ✅ Audio completo (legal!)          │
+  │    source: "fma",                                                           │
+  │    duration: track.track_duration,   // Duración en segundos                │
+  │    license: track.license_title      // Licencia Creative Commons           │
+  │  }                                                                          │
+  │                                                                             │
+  │  MANEJO DE ERRORES:                                                         │
+  │  │                                                                          │
+  │  ├─ Sin API key                    → 400 FMAServiceError                   │
+  │  ├─ Error de respuesta             → FMAServiceError                       │
+  │  ├─ Timeout (8s)                   → 408 FMAServiceError                   │
+  │  └─ Error desconocido             → FMAServiceError genérico              │
+  │                                                                             │
+  └─────────────────────────────────────────────────────────────────────────────┘
+  │
+  ▼
+  🎵 FMA es la única fuente con música 100% legal y gratuita
+     (Creative Commons). Los archivos se pueden descargar y reproducir
+     sin restricciones. Ideal para el reproductor.
+
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                  MERGE RESULTS - DEDUPLICACIÓN Y COMBINACIÓN                    │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+  mergeResults.js
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                                                                             │
+  │  Entrada: 3 arrays de tracks (spotify, musicbrainz, fma)                    │
+  │                                                                             │
+  │  Proceso:                                                                   │
+  │  1. Concatenar todos los resultados en un solo array                        │
+  │  2. Deduplicar por clave compuesta: `${source}-${id}`                       │
+  │  3. Ordenar: Spotify primero, luego MusicBrainz, luego FMA                  │
+  │                                                                             │
+  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐                │
+  │  │ Spotify: 5     │  │ MusicBrainz: 5 │  │ FMA: 5         │                │
+  │  │ tracks         │  │ tracks         │  │ tracks         │                │
+  │  └───────┬────────┘  └───────┬────────┘  └───────┬────────┘                │
+  │          │                  │                  │                           │
+  │          └──────────────────┼──────────────────┘                           │
+  │                             │                                               │
+  │                             ▼                                               │
+  │              ┌──────────────────────────────┐                               │
+  │              │  Array combinado (max 15)     │                               │
+  │              │  [                             │                               │
+  │              │    { id, name, artist, ... },  │                               │
+  │              │    { id, name, artist, ... },  │                               │
+  │              │    ...                         │                               │
+  │              │  ]                             │                               │
+  │              └──────────────────────────────┘                               │
+  │                                                                             │
+  │  ⚡ Optimización: La key compuesta source+id evita clashes                  │
+  │     entre IDs de Spotify ("3JdR3j0") y MusicBrainz (UUID)                  │
+  │                                                                             │
+  └─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                  COMPARATIVA DE APIs                                           │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+  ┌──────────────┬──────────────┬──────────────┬──────────────────┬──────────────┐
+  │  CARACTERÍS- │  SPOTIFY     │  MUSICBRAINZ  │  FMA              │  OBSERVACIÓN│
+  │  TICA        │              │               │                   │              │
+  ├──────────────┼──────────────┼──────────────┼──────────────────┼──────────────┤
+  │  Preview     │  ✅ 30s      │  ❌ No        │  ✅ Completo      │  Solo FMA    │
+  │  Audio       │              │               │   (legal)         │  tiene audio  │
+  │              │              │               │                   │  completo     │
+  ├──────────────┼──────────────┼──────────────┼──────────────────┼──────────────┤
+  │  Imagen      │  ✅ Alta     │  ⚠️ Variable  │  ❌ No            │  Spotify     │
+  │  Álbum       │  resolución  │               │                   │  gana en     │
+  │              │              │               │                   │  calidad     │
+  ├──────────────┼──────────────┼──────────────┼──────────────────┼──────────────┤
+  │  Autentica-  │  Client      │  No requiere  │  API Key          │  Cada una   │
+  │  ción        │  Credentials │               │                   │  tiene su   │
+  │              │  (token 1h)  │               │                   │  método      │
+  ├──────────────┼──────────────┼──────────────┼──────────────────┼──────────────┤
+  │  Rate Limit  │  ~1000 req/h │  1 req/s      │  Depende del plan │  MusicBrainz │
+  │              │              │  (estricto)   │                   │  es el más   │
+  │              │              │               │                   │  restrictivo │
+  ├──────────────┼──────────────┼──────────────┼──────────────────┼──────────────┤
+  │  Licencia    │  ⚠️ Solo     │  Open Data    │  ✅ Creative     │  FMA es la   │
+  │              │  previews    │  (libre)      │  Commons         │  más libre   │
+  ├──────────────┼──────────────┼──────────────┼──────────────────┼──────────────┤
+  │  Cobertura   │  Excelente   │  Buena        │  Limitada        │  Spotify     │
+  │  Musical     │  (millones)  │  (amplia)     │  (indie/CC)      │  domina      │
+  ├──────────────┼──────────────┼──────────────┼──────────────────┼──────────────┤
+  │  Timeout     │  8s          │  8s           │  8s              │  Configurable│
+  │  config.     │              │               │                   │  en servicios│
+  └──────────────┴──────────────┴──────────────┴──────────────────┴──────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                  RECOMENDACIONES - PYTHON/FASTAPI                               │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+  Frontend                          Backend                           Python
+    │                                │                                │
+    │  GET /api/recommendations      │                                │
+    │───────────────────────────────►│                                │
+    │                                │                                │
+    │                                │  python.service.js             │
+    │                                │  getRecommendations(userId)    │
+    │                                │───────────────────────────────►│
+    │                                │                                │
+    │                                │  ⚠️ ACTUALMENTE:              │
+    │                                │  Retorna datos hardcodeados    │
+    │                                │  (sin ML, sin BD)              │
+    │                                │                                │
+    │                                │  { "recommendations": [        │
+    │                                │    { "track_id": "...",        │
+    │                                │      "title": "...",           │
+    │                                │      "artist": "...",          │
+    │                                │      "score": 0.95 } ] }       │
+    │                                │                                │
+    │◄───────────────────────────────│                                │
+    │                                │                                │
+    │  Retorna recomendaciones       │                                │
+    │  al usuario                    │                                │
+
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                  FLUJO COMPLETO: USUARIO BUSCA Y REPRODUCE                      │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+  Tiempo
+    │
+    │  Usuario escribe "beatles" en el input
+    ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │  FRONTEND: Home.jsx                                                         │
+  │  ● handleSearch() llamado al submit del form                                │
+  │  ● api.get('/search?q=beatles&page=1&limit=10')                            │
+  └─────────────────────────────────┬───────────────────────────────────────────┘
+                                    │
+                                    ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │  BACKEND: search.controller.js                                              │
+  │                                                                             │
+  │  ┌──────────────────────────────┐  ┌──────────────────────────────────────┐ │
+  │  │  Spotify: 3 resultados       │  │  MusicBrainz: 4 resultados           │ │
+  │  │  "Hey Jude"                  │  │  "Hey Jude"                          │ │
+  │  │  "Let it Be"                 │  │  "Let it Be"                         │ │
+  │  │  "Yesterday"                 │  │  "Yesterday"                         │ │
+  │  │                              │  │  "Come Together"                     │ │
+  │  │  previewUrl: ✅              │  │  previewUrl: ❌                     │ │
+  │  └──────────────────────────────┘  └──────────────────────────────────────┘ │
+  │  ┌──────────────────────────────┐  ┌──────────────────────────────────────┐ │
+  │  │  FMA: 2 resultados           │  │  mergeResults = 9 tracks             │ │
+  │  │  "Hey Jude (cover)"          │  │  (sin duplicados)                    │ │
+  │  │  "Yesterday (remix)"         │  │                                       │ │
+  │  │                              │  │  INSERT search_history (si user)     │ │
+  │  │  previewUrl: ✅ (completo)   │  │                                       │ │
+  │  └──────────────────────────────┘  └──────────────────────────────────────┘ │
+  └─────────────────────────────────┬───────────────────────────────────────────┘
+                                    │
+                                    ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │  FRONTEND: SearchResults.jsx                                                │
+  │                                                                             │
+  │  ● Muestra 9 resultados en cards                                           │
+  │  ● Cada card: imagen, nombre, artista, álbum, fuente                        │
+  │  ● Botón "▶ Play" si previewUrl existe                                      │
+  │  ● Botón "♡ Favorito" (deshabilitado si guest)                             │
+  │                                                                             │
+  │  Usuario hace click en "Hey Jude" de Spotify                                │
+  └─────────────────────────────────┬───────────────────────────────────────────┘
+                                    │
+                                    ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │  FRONTEND: Player.jsx                                                       │
+  │                                                                             │
+  │  ● handlePlay(track):                                                       │
+  │    → setQueue(results)  ← toda la lista de resultados                      │
+  │    → setCurrentTrack(track)  ← "Hey Jude"                                  │
+  │                                                                             │
+  │  ● useEffect crea new Audio(previewUrl)                                     │
+  │  ● Reproduce preview de 30s de Spotify                                      │
+  │  ● Controles: Play/Pause, Volumen, Next, Previous                          │
+  │  ● Al terminar: auto-advance al siguiente en queue                         │
+  │                                                                             │
+  │  Botón "Cargar más resultados":                                             │
+  │  → handleLoadMore()                                                         │
+  │  → api.get('/search?q=beatles&page=2&limit=10')                            │
+  │  → appendResults(results)                                                   │
+  └─────────────────────────────────────────────────────────────────────────────┘

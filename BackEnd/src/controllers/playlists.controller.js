@@ -19,6 +19,7 @@
 
 import { insert, findMany, findOne, update, remove } from '../db/database.js';
 
+var track;
 class PlaylistsControllerError extends Error {
   constructor(message, statusCode) {
     super(message);

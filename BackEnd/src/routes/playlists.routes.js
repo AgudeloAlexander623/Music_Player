@@ -14,7 +14,7 @@
  */
 
 import express from 'express';
-import { verifyTokenMiddleware } from '../middleware/verifyToken.js';
+import { verifyTokenMiddleware, requireRealUser } from '../middleware/verifyToken.js';
 import {
   createPlaylist,
   getPlaylists,
@@ -30,15 +30,15 @@ const router = express.Router();
 // Middleware de autenticación para todas las rutas
 router.use(verifyTokenMiddleware);
 
-// Rutas de playlists
-router.post('/', createPlaylist);
+// Rutas de playlists (solo lectura para invitados)
+router.post('/', requireRealUser, createPlaylist);
 router.get('/', getPlaylists);
-router.put('/:id', updatePlaylist);
-router.delete('/:id', deletePlaylist);
+router.put('/:id', requireRealUser, updatePlaylist);
+router.delete('/:id', requireRealUser, deletePlaylist);
 
-// Rutas de tracks en playlists
-router.post('/:id/tracks', addTrackToPlaylist);
+// Rutas de tracks en playlists (solo lectura para invitados)
+router.post('/:id/tracks', requireRealUser, addTrackToPlaylist);
 router.get('/:id/tracks', getPlaylistTracks);
-router.delete('/:id/tracks/:trackId', removeTrackFromPlaylist);
+router.delete('/:id/tracks/:trackId', requireRealUser, removeTrackFromPlaylist);
 
 export default router;

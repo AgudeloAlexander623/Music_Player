@@ -10,7 +10,7 @@ const links = [
 ];
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, isGuest, logout } = useAuth();
   const location = useLocation();
 
   return (
@@ -30,9 +30,11 @@ export default function Navbar() {
 
         {user && (
           <>
-            <span className="navbar-user">{user.email}</span>
+            <span className="navbar-user">
+              {isGuest ? '👤 Invitado' : user.email}
+            </span>
             <button className="navbar-logout" onClick={logout}>
-              Salir
+              {isGuest ? 'Salir' : 'Cerrar sesión'}
             </button>
           </>
         )}

@@ -140,3 +140,33 @@
 .auth-link a {
   color: var(--accent);
 }
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.auth-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.auth-divider-text {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.auth-button-guest {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.auth-button-guest:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}

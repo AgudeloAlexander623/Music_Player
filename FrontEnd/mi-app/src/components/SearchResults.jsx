@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useToast } from './Toast';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import './SearchResults.css';
 
@@ -9,6 +10,7 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
   const [userPlaylists, setUserPlaylists] = useState([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const menuRef = useRef(null);
+  const { isGuest } = useAuth();
   const toast = useToast();
 
   const loadPlaylists = async () => {
@@ -56,6 +58,18 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
       toast.error('No se pudo agregar a la playlist');
     }
     setPlaylistMenuId(null);
+  };
+
+  const handlePlaylistClick = (trackId) => {
+    if (isGuest) {
+      toast.info('Regístrate o inicia sesión para crear playlists');
+      return;
+    }
+    if (playlistMenuId === trackId) {
+      setPlaylistMenuId(null);
+    } else {
+      setPlaylistMenuId(trackId);
+    }
   };
 
   const filtered = results.filter((item) => {
@@ -124,7 +138,7 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
               <div className="track-playlist-dropdown">
                 <button
                   className="track-btn"
-                  onClick={() => setPlaylistMenuId(playlistMenuId === track.id ? null : track.id)}
+                  onClick={() => handlePlaylistClick(track.id)}
                   title="Agregar a playlist"
                 >
                   📋

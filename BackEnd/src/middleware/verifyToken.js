@@ -45,10 +45,9 @@ export const verifyTokenMiddleware = (req, res, next) => {
     const decoded = verifyToken(token);
 
     // Agregar información del usuario al request
-    req.user = {
-      userId: decoded.userId,
-      email: decoded.email,
-    };
+    req.user = decoded.guest
+      ? { userId: null, email: null, guest: true }
+      : { userId: decoded.userId, email: decoded.email };
 
     // Continuar al siguiente middleware/controller
     next();
@@ -108,5 +107,27 @@ export const optionalVerifyTokenMiddleware = (req, res, next) => {
     console.warn(`[Optional Token Verification] Token validation skipped: ${error.message}`);
   }
 
+  next();
+};
+
+/**
+ * MIDDLEWARE: BLOQUEAR USUARIOS INVITADOS
+ *
+ * Se aplica a rutas que requieren un usuario registrado
+ * (favoritos, playlists, etc.)
+ *
+ * Si req.user.guest es true, retorna 403
+ * Si el usuario es real (tiene userId), continúa normalmente
+ *
+ * USO EN RUTAS:
+ * router.post('/favorites', verifyToken, requireRealUser, controller);
+ */
+export const requireRealUser = (req, res, next) => {
+  if (req.user && req.user.guest) {
+    return res.status(403).json({
+      error: 'Acción no disponible en modo invitado',
+      details: 'Regístrate o inicia sesión para usar esta función',
+    });
+  }
   next();
 };
