@@ -26,13 +26,6 @@ body {
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
-  margin-left: 180px;
-}
-
-@media (max-width: 768px) {
-  body {
-    margin-left: 70px;
-  }
 }
 
 a {

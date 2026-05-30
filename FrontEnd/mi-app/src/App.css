@@ -8,6 +8,17 @@
   font-size: 1.1rem;
 }
 
+.main-content {
+  margin-left: 180px;
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 70px;
+  }
+}
+
 .home-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -90,14 +101,6 @@
 .load-more-btn:hover:not(:disabled) {
   background: rgba(194, 90, 125, 0.15);
   border-color: var(--accent);
-}
-
-/* Global styles for all pages with sidebar */
-main[class*='dashboard'],
-main[class*='favorites'],
-main[class*='playlists'],
-main[class*='profile'] {
-  margin-left: 0;
 }
 
 @media (max-width: 768px) {

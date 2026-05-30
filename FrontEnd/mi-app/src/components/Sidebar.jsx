@@ -3,16 +3,14 @@ import { useAuth } from '../context/AuthContext';
 import './Sidebar.css';
 
 export default function Sidebar() {
-  const { user, isGuest, logout } = useAuth();
+  const { user, isGuest } = useAuth();
   const location = useLocation();
 
   const menuItems = [
-    { to: '/', icon: '🎵', label: 'Dashboard' },
-    { to: '/favorites-albums', icon: '💿', label: 'Favorite albums' },
-    { to: '/favorites-tracks', icon: '🎶', label: 'Favorite tracks' },
-    { to: '/favorites-artists', icon: '👤', label: 'Favorite artists' },
+    { to: '/', icon: '🎵', label: 'Inicio' },
+    { to: '/favorites', icon: '⭐', label: 'Favoritos' },
     { to: '/playlists', icon: '📋', label: 'Playlists' },
-    { to: '/sources', icon: '⚙️', label: 'Sources' },
+    { to: '/profile', icon: '👤', label: 'Perfil' },
   ];
 
   return (
@@ -37,12 +35,9 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-footer">
-        <button className="sidebar-settings">⚙️</button>
-        {user && (
-          <button className="sidebar-profile" title={user.email || 'Invitado'}>
-            {isGuest ? '👤' : user.email?.charAt(0).toUpperCase()}
-          </button>
-        )}
+        <Link to="/profile" className="sidebar-profile" title={user?.email || 'Invitado'}>
+          {isGuest ? '👤' : user?.email?.charAt(0).toUpperCase()}
+        </Link>
       </div>
     </aside>
   );

@@ -63,6 +63,8 @@ CREATE TABLE IF NOT EXISTS `favorite_tracks` (
 -- Si la tabla ya existe, ejecutar manualmente:
 -- ALTER TABLE favorite_tracks ADD COLUMN album_image TEXT AFTER album;
 -- ALTER TABLE playlist_tracks ADD COLUMN album_image TEXT AFTER album;
+-- ALTER TABLE favorite_tracks MODIFY COLUMN source ENUM('spotify','musicbrainz','fma','youtube','youtube-music','deezer') NOT NULL;
+-- ALTER TABLE playlist_tracks MODIFY COLUMN source ENUM('spotify','musicbrainz','fma','youtube','youtube-music','deezer') NOT NULL;
 
 -- ===========================================
 -- TABLA: HISTORIAL DE BÚSQUEDAS

@@ -313,8 +313,8 @@ export const addTrackToPlaylist = async (req, res) => {
     }
 
     // Validar source
-    if (!['spotify', 'musicbrainz', 'fma'].includes(source)) {
-      throw new PlaylistsControllerError('Invalid source. Must be "spotify", "musicbrainz", or "fma"', 400);
+    if (!['spotify', 'musicbrainz', 'fma', 'youtube', 'youtube-music', 'deezer'].includes(source)) {
+      throw new PlaylistsControllerError('Invalid source', 400);
     }
 
     // Agregar track a la playlist

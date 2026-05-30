@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { useAuth } from './context/AuthContext';
 import { setNavigate } from './services/navigate.js';
 import Sidebar from './components/Sidebar';
+import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -29,8 +30,11 @@ function ProtectedLayout({ children }) {
 
   return (
     <>
+      <Navbar />
       <Sidebar />
-      {children}
+      <div className="main-content">
+        {children}
+      </div>
     </>
   );
 }

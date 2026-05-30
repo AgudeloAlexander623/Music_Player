@@ -30,6 +30,9 @@ export default function Profile() {
     loadStats();
   }, []);
 
+  const memberSince = user?.created_at
+    ? new Date(user.created_at).toLocaleDateString()
+    : null;
   const initial = isGuest ? '?' : (user?.email?.charAt(0).toUpperCase() || '?');
 
   return (
@@ -73,7 +76,7 @@ export default function Profile() {
           ) : (
             <>
               <p><strong>Email:</strong> {user?.email}</p>
-              <p><strong>Miembro desde:</strong> {new Date().toLocaleDateString()}</p>
+              <p><strong>Miembro desde:</strong> {memberSince || '—'}</p>
               <p><strong>Sesión:</strong> Activa (JWT 24h)</p>
             </>
           )}

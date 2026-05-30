@@ -1,79 +1,129 @@
-import axios from 'axios';
+import axios from "axios";
+
+const BASE_URL = "https://musicbrainz.org/ws/2/recording/";
+const COVER_ART_BASE = "https://coverartarchive.org/release";
+const MIN_INTERVAL_MS = 1100;
+const MAX_RETRIES = 2;
+const BASE_DELAY_MS = 1000;
+const TIMEOUT_MS = 8000;
+const MAX_LIMIT = 25;
+
+let lastRequestTime = 0;
+let rateLimitPromise = null;
 
 class MusicBrainzServiceError extends Error {
-  constructor(message, statusCode) {
+  constructor(message, statusCode, retryable = false) {
     super(message);
     this.name = "MusicBrainzServiceError";
     this.statusCode = statusCode;
+    this.retryable = retryable;
   }
 }
 
-let lastRequestTime = 0;
-const MIN_INTERVAL_MS = 1100;
-
 async function rateLimit() {
-  const now = Date.now();
-  const elapsed = now - lastRequestTime;
-  if (elapsed < MIN_INTERVAL_MS) {
-    await new Promise(resolve => setTimeout(resolve, MIN_INTERVAL_MS - elapsed));
-  }
-  lastRequestTime = Date.now();
+  if (rateLimitPromise) return rateLimitPromise;
+
+  rateLimitPromise = (async () => {
+    try {
+      const now = Date.now();
+      const elapsed = now - lastRequestTime;
+      if (elapsed < MIN_INTERVAL_MS) {
+        await new Promise((resolve) => setTimeout(resolve, MIN_INTERVAL_MS - elapsed));
+      }
+      lastRequestTime = Date.now();
+    } finally {
+      rateLimitPromise = null;
+    }
+  })();
+
+  return rateLimitPromise;
+}
+
+export function _resetForTest() {
+  lastRequestTime = 0;
+  rateLimitPromise = null;
+}
+
+function normalizeRecording(recording) {
+  const artists = recording["artist-credit"] ?? [];
+  const artist = artists.map((a) => (typeof a === "object" ? a.name : String(a))).join(", ") || "Unknown";
+
+  const release = recording.releases?.[0] ?? null;
+  const album = release?.title ?? "";
+  const albumImage = release?.id
+    ? `${COVER_ART_BASE}/${release.id}/front`
+    : "";
+  const duration = recording.length != null ? Math.round(recording.length / 1000) : null;
+
+  return {
+    id: recording.id,
+    name: recording.title ?? "Unknown",
+    artist,
+    album,
+    albumImage,
+    previewUrl: null,
+    duration,
+    source: "musicbrainz",
+  };
 }
 
 export async function searchMusicBrainz(query, limit = 10) {
-  try {
-    await rateLimit();
+  let lastError;
 
-    const searchLimit = Math.min(limit, 25);
-    const res = await axios.get(
-      `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(query)}&fmt=json&limit=${searchLimit}`,
-      {
-        headers: {
-          'User-Agent': 'Reproductor-App/1.0',
+  const searchLimit = Math.min(limit, MAX_LIMIT);
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await rateLimit();
+
+      const res = await axios.get(BASE_URL, {
+        params: {
+          query,
+          fmt: "json",
+          limit: searchLimit,
         },
-        timeout: 8000,
+        headers: {
+          "User-Agent": "Reproductor-App/1.0 (alexander@example.com)",
+        },
+        timeout: TIMEOUT_MS,
+      });
+
+      if (!res.data.recordings) return [];
+
+      return res.data.recordings.map(normalizeRecording);
+    } catch (error) {
+      lastError = error;
+      if (error instanceof MusicBrainzServiceError && !error.retryable) throw error;
+      if (error.response?.status && error.response.status < 500 && error.response.status !== 429) {
+        throw new MusicBrainzServiceError(
+          `MusicBrainz search failed: ${error.response.status} ${error.response.statusText}`,
+          error.response.status,
+          false
+        );
       }
-    );
+      if (attempt < MAX_RETRIES) {
+        await new Promise((r) => setTimeout(r, BASE_DELAY_MS * Math.pow(2, attempt)));
+      }
+    }
+  }
 
-    if (!res.data.recordings) {
-      return [];
-    }
-
-    return res.data.recordings.map((track) => {
-      const album = track.releases?.[0]?.title ?? "";
-      const albumImage = track.releases?.[0]?.['cover-art-archive']?.artwork
-        ? `https://coverartarchive.org/release/${track.releases[0].id}/front`
-        : "";
-
-      return {
-        id: track.id,
-        name: track.title,
-        artist: track['artist-credit']?.[0]?.name ?? 'Unknown',
-        album,
-        albumImage,
-        previewUrl: null,
-        source: 'musicbrainz',
-      };
-    });
-  } catch (error) {
-    if (error instanceof MusicBrainzServiceError) {
-      throw error;
-    }
-    if (error.response) {
-      throw new MusicBrainzServiceError(
-        `MusicBrainz search failed: ${error.response.status} ${error.response.statusText}`,
-        error.response.status
-      );
-    }
-    if (error.code === "ECONNABORTED") {
-      throw new MusicBrainzServiceError(
-        "MusicBrainz request timeout (8s). Service may be unavailable.",
-        408
-      );
-    }
+  if (lastError.response) {
     throw new MusicBrainzServiceError(
-      `Failed to search MusicBrainz: ${error.message}`,
-      500
+      `MusicBrainz search failed: ${lastError.response.status} ${lastError.response.statusText}`,
+      lastError.response.status,
+      lastError.response.status >= 500 || lastError.response.status === 429
     );
   }
+  if (lastError.code === "ECONNABORTED") {
+    throw new MusicBrainzServiceError(
+      "MusicBrainz request timeout. Service may be unavailable.",
+      408,
+      true
+    );
+  }
+  throw new MusicBrainzServiceError(
+    `Failed to search MusicBrainz: ${lastError?.message ?? "Unknown error"}`,
+    500,
+    false
+  );
 }

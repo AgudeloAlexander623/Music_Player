@@ -103,6 +103,8 @@ export const register = async (req, res) => {
     // Generar token JWT
     const token = generateToken(userId, email.toLowerCase());
 
+    const newUser = await findOne('users', { id: userId });
+
     return res.status(201).json({
       success: true,
       message: 'User registered successfully',
@@ -110,6 +112,7 @@ export const register = async (req, res) => {
       user: {
         userId,
         email: email.toLowerCase(),
+        created_at: newUser.created_at,
       },
     });
   } catch (error) {
@@ -190,6 +193,7 @@ export const login = async (req, res) => {
       user: {
         userId: user.id,
         email: user.email,
+        created_at: user.created_at,
       },
     });
   } catch (error) {

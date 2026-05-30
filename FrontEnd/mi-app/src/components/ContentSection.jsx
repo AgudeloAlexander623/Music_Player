@@ -1,6 +1,6 @@
 import './ContentSection.css';
 
-export default function ContentSection({ title, items, badge, onFilter, filterValue, hasNavigation = true }) {
+export default function ContentSection({ title, items, badge, onFilter, filterValue, hasNavigation = true, onPlay }) {
   const scrollLeft = (e) => {
     const container = e.currentTarget.nextElementSibling;
     container.scrollBy({ left: -400, behavior: 'smooth' });
@@ -46,7 +46,7 @@ export default function ContentSection({ title, items, badge, onFilter, filterVa
             <div className="item-image">
               <img src={item.image || 'https://via.placeholder.com/180'} alt={item.name} />
               <div className="item-overlay">
-                <button className="play-btn">▶</button>
+                <button className="play-btn" onClick={() => onPlay?.(item)}>▶</button>
               </div>
             </div>
             <div className="item-info">

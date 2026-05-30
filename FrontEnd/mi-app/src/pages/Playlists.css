@@ -131,10 +131,17 @@
   background: rgba(194, 90, 125, 0.25);
   border-color: rgba(194, 90, 125, 0.4);
 }
+
+.playlist-action-btn.edit {
+  color: var(--accent);
 }
 
-.playlist-action-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+.playlist-action-btn.delete {
+  color: #f87171;
+}
+
+.playlist-action-btn.ver {
+  color: #79e0c5;
 }
 
 .playlist-action-btn.edit {

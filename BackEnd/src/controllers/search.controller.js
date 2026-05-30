@@ -1,6 +1,8 @@
 import { searchSpotify } from '../services/spotify.services.js';
 import { searchMusicBrainz } from '../services/musicbrainz.service.js';
 import { searchFMA } from '../services/fma.services.js';
+import { searchYouTube, searchYouTubeMusic } from '../services/youtube.services.js';
+import { searchDeezer } from '../services/deezer.services.js';
 import { mergeResults } from '../utils/mergeResults.js';
 import { insert } from '../db/database.js';
 
@@ -31,59 +33,49 @@ export const searchController = async (req, res) => {
       Math.max(1, parseInt(req.query.limit) || DEFAULT_LIMIT)
     );
 
-    let spotifyResults = [];
-    let spotifyError = null;
-    let musicBrainzResults = [];
-    let musicBrainzError = null;
-    let fmaResults = [];
-    let fmaError = null;
+    const sources = [
+      { name: 'Spotify', fn: () => searchSpotify(query, limit) },
+      { name: 'MusicBrainz', fn: () => searchMusicBrainz(query, limit) },
+      { name: 'FMA', fn: () => searchFMA(query, page, limit) },
+      { name: 'YouTube', fn: () => searchYouTube(query, limit) },
+      { name: 'YouTubeMusic', fn: () => searchYouTubeMusic(query, limit) },
+      { name: 'Deezer', fn: () => searchDeezer(query, limit) },
+    ];
 
-    try {
-      spotifyResults = await searchSpotify(query, limit);
-    } catch (error) {
-      spotifyError = {
-        service: 'Spotify',
-        message: error.message,
-        statusCode: error.statusCode || 500,
-      };
-      console.error(`[Spotify Error] ${error.message}`);
+    const results = {};
+    const errors = [];
+
+    for (const { name, fn } of sources) {
+      try {
+        results[name] = await fn();
+      } catch (error) {
+        errors.push({
+          service: name,
+          message: error.message,
+          statusCode: error.statusCode || 500,
+        });
+        results[name] = [];
+        console.error(`[${name} Error] ${error.message}`);
+      }
     }
 
-    try {
-      musicBrainzResults = await searchMusicBrainz(query, limit);
-    } catch (error) {
-      musicBrainzError = {
-        service: 'MusicBrainz',
-        message: error.message,
-        statusCode: error.statusCode || 500,
-      };
-      console.error(`[MusicBrainz Error] ${error.message}`);
-    }
-
-    try {
-      fmaResults = await searchFMA(query, page, limit);
-    } catch (error) {
-      fmaError = {
-        service: 'FMA',
-        message: error.message,
-        statusCode: error.statusCode || 500,
-      };
-      console.error(`[FMA Error] ${error.message}`);
-    }
-
-    const failedCount = [spotifyError, musicBrainzError, fmaError].filter(Boolean).length;
-    if (failedCount === 3) {
+    if (errors.length === sources.length) {
       return res.status(500).json({
         error: "All search services failed",
-        details: {
-          spotify: spotifyError?.message,
-          musicbrainz: musicBrainzError?.message,
-          fma: fmaError?.message,
-        },
+        details: Object.fromEntries(
+          errors.map((e) => [e.service.toLowerCase(), e.message])
+        ),
       });
     }
 
-    const finalResults = mergeResults(spotifyResults, musicBrainzResults, fmaResults);
+    const finalResults = mergeResults(
+      results.Spotify,
+      results.MusicBrainz,
+      results.FMA,
+      results.YouTube,
+      results.Deezer,
+      results.YouTubeMusic
+    );
 
     if (req.user) {
       try {
@@ -97,10 +89,7 @@ export const searchController = async (req, res) => {
       }
     }
 
-    const warnings = [];
-    if (spotifyError) warnings.push(`Spotify unavailable: ${spotifyError.message}`);
-    if (musicBrainzError) warnings.push(`MusicBrainz unavailable: ${musicBrainzError.message}`);
-    if (fmaError) warnings.push(`FMA unavailable: ${fmaError.message}`);
+    const warnings = errors.map((e) => `${e.service} unavailable: ${e.message}`);
 
     const response = {
       tracks: finalResults,
@@ -109,11 +98,9 @@ export const searchController = async (req, res) => {
         page,
         limit,
       },
-      sources: {
-        spotify: spotifyResults.length,
-        musicbrainz: musicBrainzResults.length,
-        fma: fmaResults.length,
-      },
+      sources: Object.fromEntries(
+        sources.map(({ name }) => [name.toLowerCase(), results[name].length])
+      ),
     };
 
     if (warnings.length > 0) {

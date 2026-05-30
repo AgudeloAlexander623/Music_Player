@@ -109,6 +109,21 @@
   color: #ffb74d;
 }
 
+.source-youtube {
+  background: rgba(255, 0, 0, 0.15);
+  color: #ff4444;
+}
+
+.source-youtube-music {
+  background: rgba(255, 0, 0, 0.15);
+  color: #ff4444;
+}
+
+.source-deezer {
+  background: rgba(0, 169, 237, 0.15);
+  color: #00a9ed;
+}
+
 .track-license {
   font-size: 0.7rem;
   color: var(--muted);

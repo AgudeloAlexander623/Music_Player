@@ -76,6 +76,9 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
     if (filter === 'spotify') return item.source === 'spotify';
     if (filter === 'musicbrainz') return item.source === 'musicbrainz';
     if (filter === 'fma') return item.source === 'fma';
+    if (filter === 'youtube') return item.source === 'youtube';
+    if (filter === 'youtube-music') return item.source === 'youtube-music';
+    if (filter === 'deezer') return item.source === 'deezer';
     return true;
   });
 
@@ -93,6 +96,15 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
         </button>
         <button className="filter-btn" onClick={() => setFilter('fma')} disabled={filter === 'fma'}>
           FMA
+        </button>
+        <button className="filter-btn" onClick={() => setFilter('youtube')} disabled={filter === 'youtube'}>
+          YouTube
+        </button>
+        <button className="filter-btn" onClick={() => setFilter('youtube-music')} disabled={filter === 'youtube-music'}>
+          YouTube Music
+        </button>
+        <button className="filter-btn" onClick={() => setFilter('deezer')} disabled={filter === 'deezer'}>
+          Deezer
         </button>
       </div>
 
