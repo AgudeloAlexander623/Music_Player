@@ -1,0 +1,361 @@
+# PROYECTO REPRODUCTOR — Prompt para Asistente IA
+
+Eres un desarrollador senior full-stack con experiencia en Node.js, React, Python, MySQL y Docker. Tu tarea es ayudarme a completar y mejorar este proyecto.
+
+---
+
+## CONTEXTO DEL PROYECTO
+
+**Reproductor** es un clon de Spotify full-stack que agrega resultados de búsqueda desde 6 APIs de música (Spotify, MusicBrainz, FMA, YouTube, YouTube Music, Deezer). Incluye autenticación JWT, favoritos, playlists, reproductor de audio y recomendaciones.
+
+### Stack técnico
+
+| Capa | Tecnología |
+|---|---|
+| Backend | Node.js + Express 5, ES Modules |
+| Frontend | React 19 + Vite 8, react-router-dom v7, CSS puro |
+| Base de datos | MySQL con mysql2/promise |
+| Microservicio | Python FastAPI (recomendaciones) |
+| Infraestructura | Docker + Docker Compose (MySQL, Backend, Frontend con Nginx, Python) |
+| Tests | `node:test` en backend |
+
+### Estructura del proyecto
+
+```
+Reproductor/
+├── BackEnd/src/
+│   ├── app.js                      # Entry point Express
+│   ├── controllers/
+│   │   ├── auth.controller.js      # Register, Login, Guest, Verify
+│   │   ├── search.controller.js    # Búsqueda multi-API
+│   │   ├── favorites.controller.js # CRUD favoritos
+│   │   ├── playlists.controller.js # CRUD playlists + tracks
+│   │   └── recommendations.controller.js # Proxy a Python
+│   ├── routes/                     # 5 routers (auth, search, favorites, playlists, recommendations)
+│   ├── middlewares/
+│   │   ├── verifyTokenMiddleware.js
+│   │   └── requireRealUser.js
+│   ├── services/
+│   │   ├── spotify.services.js     # Con cache de token, retry, paginación
+│   │   ├── musicbrainz.service.js  # Con rate limit, retry
+│   │   ├── youtube.services.js     # Con cache, cuota, retry
+│   │   ├── deezer.services.js
+│   │   ├── fma.services.js
+│   │   └── python.services.js      # Proxy al microservicio Python
+│   ├── utils/
+│   │   └── mergeResults.js         # Fusión + dedup multi-fuente
+│   ├── db/
+│   │   └── database.js             # Pool MySQL + helpers CRUD
+│   └── __tests__/
+│       ├── database.test.js
+│       ├── spotify.test.js         # 17 tests (token, retry, race conditions, etc.)
+│       └── musicbrainz.test.js     # 13 tests (rate limit, retry, cover art, etc.)
+├── FrontEnd/mi-app/src/
+│   ├── App.jsx                     # Router + ProtectedLayout
+│   ├── main.jsx                    # Entry point Vite
+│   ├── index.css                   # Estilos globales
+│   ├── App.css, Auth.css, Dashboard.css, Profile.css, Playlists.css, Home.css
+│   ├── contexts/AuthContext.jsx    # Estado global de auth
+│   ├── services/api.js             # Axios instance con interceptor JWT
+│   ├── utils/navigate.js           # Navegación fuera de componentes
+│   ├── pages/
+│   │   ├── Dashboard.jsx           # Página principal con search + secciones
+│   │   ├── Login.jsx, Register.jsx # Auth
+│   │   ├── Favorites.jsx           # CRUD favoritos
+│   │   ├── Playlists.jsx           # CRUD playlists
+│   │   └── Profile.jsx             # Perfil + stats
+│   └── components/
+│       ├── Sidebar.jsx, Navbar.jsx # Layout
+│       ├── Player.jsx              # Reproductor de audio
+│       ├── ContentSection.jsx      # Filas de tarjetas
+│       ├── SearchResults.jsx       # Resultados con filtros
+│       ├── Toast.jsx               # Notificaciones
+│       └── ErrorBoundary.jsx       # Captura errores
+├── python-services/
+│   └── main.py                     # FastAPI (recomendaciones hardcodeadas)
+├── docker/
+│   ├── docker-compose.yml          # Producción
+│   ├── docker-compose.dev.yml      # Desarrollo (hot-reload)
+│   ├── Dockerfile.backend
+│   ├── Dockerfile.frontend (multi-stage)
+│   ├── Dockerfile.python
+│   └── nginx.conf
+├── docks/DataBases.sql             # Schema MySQL
+├── diagrams/                       # Documentación técnica
+├── .env.example                    # Variables requeridas
+└── BackEnd/package.json            # test: "node --test src/__tests__/*.test.js"
+```
+
+### API externas integradas
+
+| Fuente | Auth | Límites |
+|---|---|---|
+| Spotify | Client Credentials (Client ID + Secret) | ~1000 req/h |
+| YouTube | API Key | 10,000 unidades/día (~50 búsquedas) |
+| Deezer | Público (sin auth) | 50 req/5s |
+| MusicBrainz | User-Agent header | 1 req/s (por cortesía) |
+| FMA (Free Music Archive) | API Key | Sin límite documentado |
+
+### Formato estándar de track (todas las fuentes)
+
+```js
+{
+  id: string,
+  name: string,
+  artist: string,
+  album: string,
+  albumImage: string,    // URL de portada
+  previewUrl: string|null, // URL de audio (30s preview)
+  duration: number|null,   // en segundos
+  source: string           // "spotify" | "musicbrainz" | "fma" | "youtube" | "deezer" | "youtube-music"
+}
+```
+
+### Endpoints del backend
+
+```
+GET  /api/search?q=&page=&limit=     ← Busca en 6 APIs y fusiona
+POST /api/auth/register              ← Registro con bcrypt + JWT
+POST /api/auth/login                 ← Login con JWT 24h
+POST /api/auth/guest                 ← Guest mode (JWT sin BD)
+POST /api/auth/verify                ← Verifica validez del token
+GET  /api/favorites                  ← Listar favoritos (JWT)
+POST /api/favorites                  ← Agregar favorito (JWT)
+DELETE /api/favorites/:id            ← Eliminar favorito (JWT)
+GET  /api/playlists                  ← Listar playlists (JWT)
+POST /api/playlists                  ← Crear playlist (JWT, user real)
+PUT  /api/playlists/:id              ← Renombrar (JWT, user real)
+DELETE /api/playlists/:id            ← Eliminar (JWT, user real)
+GET  /api/playlists/:id/tracks       ← Ver canciones de playlist
+POST /api/playlists/:id/tracks       ← Agregar canción (JWT, user real)
+DELETE /api/playlists/:id/tracks/:trackId  ← Quitar canción (JWT, user real)
+GET  /api/recommendations            ← Proxy a Python
+GET  /api/recommendations/status     ← Health check microservicio
+```
+
+### Decisiones técnicas importantes
+
+- La BD es **opcional**: si MySQL no está disponible, el backend arranca igual en "modo sin BD". Las funciones de auth, favoritos y playlists fallarán con 500, pero el search funciona.
+- El token de Spotify se cachea en memoria y se refresca automáticamente. Hay un mutex para prevenir race conditions.
+- MusicBrainz aplica rate limiting de 1.1s entre llamadas con mutex.
+- YouTube tiene caché en memoria con TTL de 5 minutos y control de cuota (10k unidades/día).
+- La fusión de resultados usa clave `${source}-${id}` para dedup. MusicBrainz se correlaciona con Spotify por nombre/artista normalizado.
+- Los tokens JWT de invitados tienen `{ guest: true }` en el payload. Las rutas de escritura (playlists, favoritos) requieren usuario real.
+- El frontend usa Axios con interceptor que redirige a `/login` en 401.
+
+---
+
+## TAREAS A REALIZAR
+
+Por favor, completa TODAS las siguientes tareas en orden. No saltes ninguna ni asumas que algo "ya funciona". Sé minucioso.
+
+### TAREA 1: Sistema de recomendaciones real en Python
+
+Archivo: `python-services/main.py`
+
+**Problema actual:** El endpoint `POST /recommend` devuelve datos hardcodeados.
+
+**Requerimientos:**
+- Implementar lógica real de recomendaciones basada en similitud de géneros/artistas
+- `POST /recommend` recibe `{ tracks: [...], count: 10 }` donde cada track tiene `{ name, artist, album, source }`
+- Debe devolver `{ recommendations: [...], metadata: { model, ... } }`
+- Usar TF-IDF sobre nombres de artistas/álbumes para encontrar tracks similares
+- Mantener compatibilidad con el endpoint `GET /health`
+- Agregar endpoint `GET /` que devuelva `{ service: "recommendations", version: "1.0", status: "ok" }`
+- Manejar caso de array vacío: devolver `{ recommendations: [], metadata: { empty: true } }`
+
+**Dataset de tracks de ejemplo** (incluir al menos 30 tracks hardcodeados de artistas variados para demo):
+- Queen, The Beatles, Michael Jackson, Daft Punk, Tame Impala, Bad Bunny, Shakira, Luis Fonsi, Karol G, Rosalía
+- Cada track debe tener: `id, name, artist, album, genre` (asignar géneros realistas: rock, pop, reggaeton, electronica, etc.)
+
+**Algoritmo:**
+```python
+def recommend(input_tracks, all_tracks, count=10):
+    # 1. Extraer artistas y géneros de los tracks de entrada
+    # 2. TF-IDF vectorizer sobre (artist + " " + genre)
+    # 3. Cosine similarity entre input y catálogo
+    # 4. Excluir los mismos tracks de entrada
+    # 5. Retornar top-N
+    # 6. Si no hay suficientes matches, completar con tracks populares aleatorios
+```
+
+**Buenas prácticas:**
+- Usar `scikit-learn` para TF-IDF (agregar a `requirements.txt`)
+- Manejar errores con try/except
+- Logging con `logging` module
+- Tipos en funciones (`def recommend(input_tracks: list, count: int = 10) -> dict`)
+- Agregar `requirements.txt` con `fastapi`, `uvicorn`, `scikit-learn`, `pandas`, `numpy`
+
+---
+
+### TAREA 2: ESLint + Prettier para backend y frontend
+
+**Backend** (`BackEnd/`):
+- Instalar y configurar ESLint flat config (`eslint.config.js`)
+- Usar `eslint:recommended`
+- Reglas específicas:
+  - `"no-console": "warn"` (console.warn y console.error sí, console.log no)
+  - `"no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]`
+  - `"prefer-const": "error"`
+  - `"eqeqeq": ["error", "always"]`
+- Agregar script `"lint": "eslint src/"` en `package.json`
+- NO modificar `package-lock.json` manualmente
+
+**Frontend** (`FrontEnd/mi-app/`):
+- Instalar y configurar ESLint flat config
+- Extender `eslint:recommended` + `plugin:react/recommended` + `plugin:react-hooks/recommended`
+- Usar `settings: { react: { version: "detect" } }`
+- Reglas:
+  - `"react/prop-types": "off"` (no usamos PropTypes)
+  - `"react/react-in-jsx-scope": "off"` (React 19 no requiere import)
+  - `"no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]`
+- Agregar script `"lint": "eslint src/"` en `package.json`
+
+**Para ambos:**
+- NO modifiques archivos existentes solo para hacer pasar el linter a menos que sea un bug real
+- Si encuentras errores de lint en código existente, repórtalos pero NO los arregles (a menos que yo lo pida)
+
+---
+
+### TAREA 3: Player UI — ocultar cuando no hay canción seleccionada
+
+Archivo: `FrontEnd/mi-app/src/components/Player.jsx`
+
+**Problema:** La barra del reproductor se muestra siempre aunque no haya ninguna canción cargada, dejando un espacio negro vacío al fondo.
+
+**Requerimientos:**
+- El Player debe recibir `currentTrack` como prop (ya existe en App.jsx)
+- Si `currentTrack` es `null`, renderizar `null` (ocultar completamente)
+- Mantener toda la funcionalidad existente cuando hay una canción
+- NO eliminar el espacio reservado en el layout — usar CSS para que el contenido se expanda cuando el player está oculto
+- Opcional: agregar animación CSS de slide-up cuando aparece y slide-down cuando desaparece
+
+---
+
+### TAREA 4: Loading skeletons y estados vacíos
+
+Archivos:
+- `FrontEnd/mi-app/src/components/SearchResults.jsx`
+- `FrontEnd/mi-app/src/pages/Dashboard.jsx`
+- `FrontEnd/mi-app/src/pages/Favorites.jsx`
+- `FrontEnd/mi-app/src/pages/Playlists.jsx`
+
+**Requerimientos:**
+- Cada página/componente debe manejar 3 estados: **loading**, **empty**, **error**
+- **Loading:** Mostrar skeletons animados (CSS animation shimmer) que imiten la forma del contenido real
+- **Empty:** Mostrar mensaje amigable en español con icono SVG inline
+  - SearchResults: "No encontramos resultados para tu búsqueda. Probá con otras palabras."
+  - Favorites: "Todavía no tenés favoritos. Buscá música y agregá tus canciones preferidas."
+  - Playlists: "No creaste ninguna playlist todavía. ¡Empezá a organizar tu música!"
+- **Error:** Mostrar "Algo salió mal. Intentalo de nuevo." con botón de reintentar
+
+Los skeletons deben ser:
+- Bloques rectangulares con `background: linear-gradient(...)` animados
+- `@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }`
+- Usar `will-change: background-position` para rendimiento
+
+---
+
+### TAREA 5: Paginación o scroll infinito en búsqueda
+
+Archivo: `FrontEnd/mi-app/src/components/SearchResults.jsx`
+
+**Requerimientos:**
+- El backend ya soporta `page` y `limit` en `GET /api/search?q=&page=&limit=`
+- Implementar botón "Cargar más resultados" al final de la lista
+- Al hacer clic, incrementar `page` y concatenar nuevos resultados a los existentes
+- Deshabilitar el botón mientras carga
+- Ocultar el botón cuando ya no hay más resultados (count < limit)
+- Mostrar "Mostrando X de Y resultados" arriba de la lista
+- NO usar scroll infinito automático — usar botón explícito
+
+---
+
+### TAREA 6: Inicializar BD automáticamente con Docker
+
+Archivo: `docker/docker-compose.yml` (y archivos relacionados)
+
+**Problema actual:** El schema SQL está en `docks/DataBases.sql` pero no se monta automáticamente en el contenedor MySQL.
+
+**Requerimientos:**
+- Copiar o referenciar `docks/DataBases.sql` como `init.sql` montado en `docker-entrypoint-initdb.d/`
+- El contenedor MySQL debe ejecutar automáticamente el script al primer inicio
+- NO modificar `DataBases.sql` original — crear copia o symlink en `docker/init.sql`
+- Verificar en `docker-compose.yml` que la variable `MYSQL_DATABASE` coincida con la BD del schema
+- Actualizar `.env.example` si faltan variables de BD
+
+---
+
+### TAREA 7: Barra de progreso del reproductor en tiempo real
+
+Archivo: `FrontEnd/mi-app/src/components/Player.jsx`
+
+**Requerimientos:**
+- La barra de progreso debe actualizarse en tiempo real mientras reproduce (usar evento `timeupdate` del `<audio>`)
+- Mostrar tiempo transcurrido / duración total (formato `m:ss`)
+- Al hacer clic en la barra de progreso, saltar a esa posición
+- La barra debe tener un `input[type=range]` con estilo personalizado CSS
+- Mantener sincronización incluso si el usuario arrastra el slider
+
+---
+
+### TAREA 8: Página Home con contenido destacado
+
+Archivo: `FrontEnd/mi-app/src/pages/Dashboard.jsx` (ya existe, mejorarla)
+
+**Requerimientos:**
+- La página principal (Dashboard) debe mostrar 4 secciones de contenido curado:
+  1. "Lo más buscado" — top 10 tracks más buscados (requiere endpoint nuevo: `GET /api/search/trending` o usar búsquedas predefinidas)
+  2. "Nuevos lanzamientos" — resultados de búsqueda de "new releases 2026"
+  3. "Recomendado para vos" — llamar al microservicio Python con tracks de ejemplo
+  4. "Explorar por género" — badges/etiquetas: Rock, Pop, Electrónica, Reggaeton, Jazz, Clásica, Hip-Hop, R&B
+- Cada badge de género debe llevar a `GET /api/search?q=<genero>+music`
+- Manejar loading/error states en cada sección independientemente
+- NO duplicar el Sidebar (ya está en App.jsx mediante ProtectedLayout)
+- Reutilizar el componente `ContentSection` existente para renderizar cada fila
+
+---
+
+## REGLAS GENERALES
+
+1. **NO agregues dependencias innecesarias** — solo las listadas en cada tarea.
+2. **NO modifiques el comportamiento existente** a menos que la tarea lo requiera explícitamente.
+3. **NO borres código existente** — solo agrega o modifica lo necesario.
+4. **NO uses TypeScript** — el proyecto está en JavaScript.
+5. **NO agregues archivos markdown** (README, docs, etc.) a menos que yo lo pida.
+6. **NO uses emojis** en ningún archivo de código.
+7. **NO subas fotos ni imágenes** — usa SVG inline o URLs.
+8. **Mantené consistencia con el código existente** — misma indentación, mismos patrones (ej: `import` en vez de `require`).
+9. **Seguí el formato estándar de track** definido arriba en todos los endpoints.
+10. **Agregá tests para tu código** en `BackEnd/src/__tests__/` usando `node:test` y `node:assert/strict`.
+11. **Usá nombres descriptivos en inglés** para variables/funciones, y **español** para textos de UI y mensajes al usuario.
+12. **Ejecutá `npm test` en el backend** después de cada tarea para verificar que los tests existentes sigan pasando.
+
+---
+
+## FORMATO DE RESPUESTA
+
+Por cada tarea completada, respondé con:
+
+### Tarea N: [Nombre de la tarea]
+
+**Archivos modificados:**
+- `path/to/file.js` — [qué se cambió]
+
+**Código relevante:**
+[Código nuevo o modificado, SOLO las partes relevantes]
+
+**Tests:**
+- `path/to/test.js` — [qué prueba]
+
+**Verificación:**
+```
+comando para verificar que funciona
+```
+
+---
+
+[ESPACIO PARA QUE EL USUARIO AGREGUE MÁS INSTRUCCIONES]
+
+
+
