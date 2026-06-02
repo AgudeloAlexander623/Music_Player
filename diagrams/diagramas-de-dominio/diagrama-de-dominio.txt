@@ -1,0 +1,189 @@
+=========================================================
+DIAGRAMA DE DOMINIO — REPRODUCTOR
+=========================================================
+
+
+                    ┌─────────────────────┐
+                    │      Usuario        │
+                    ├─────────────────────┤
+                    │ id                  │
+                    │ name                │
+                    │ email               │
+                    │ password            │
+                    │ guest               │
+                    └─────────┬───────────┘
+                              │
+         ┌────────────────────┼────────────────────┐
+         │                    │                    │
+         │                    │                    │
+         ▼                    ▼                    ▼
+
+
+┌────────────────┐   ┌────────────────┐   ┌────────────────┐
+│   Favorito     │   │    Playlist    │   │ Historial      │
+├────────────────┤   ├────────────────┤   ├────────────────┤
+│ id             │   │ id             │   │ id             │
+│ userId         │   │ userId         │   │ userId         │
+│ trackId        │   │ name           │   │ query          │
+│ source         │   │ createdAt      │   │ createdAt      │
+└───────┬────────┘   └───────┬────────┘   └────────────────┘
+        │                    │
+        │                    │
+        ▼                    ▼
+
+
+     ┌───────────────────────────────┐
+     │            Track              │
+     ├───────────────────────────────┤
+     │ id                            │
+     │ name                          │
+     │ artist                        │
+     │ album                         │
+     │ albumImage                    │
+     │ previewUrl                    │
+     │ duration                      │
+     │ source                        │
+     │ genre                         │
+     └───────────────┬───────────────┘
+                     │
+                     │ pertenece a
+                     ▼
+
+
+            ┌───────────────────────┐
+            │        Álbum          │
+            ├───────────────────────┤
+            │ id                    │
+            │ title                 │
+            │ cover                 │
+            │ releaseDate           │
+            └───────────┬───────────┘
+                        │
+                        │ creado por
+                        ▼
+
+
+            ┌───────────────────────┐
+            │       Artista         │
+            ├───────────────────────┤
+            │ id                    │
+            │ name                  │
+            │ genre                 │
+            │ country               │
+            └───────────────────────┘
+
+
+
+---------------------------------------------------------
+DOMINIO DE RECOMENDACIONES
+---------------------------------------------------------
+
+
+Usuario
+   │
+   │ consume
+   ▼
+
+Track escuchado
+   │
+   │ genera señal para
+   ▼
+
+Recomendación
+   │
+   │ basada en similitud con
+   ▼
+
+Artista
+Género
+Álbum
+
+
+┌─────────────────────────────┐
+│ Recommendation              │
+├─────────────────────────────┤
+│ basedOnArtist               │
+│ basedOnGenre                │
+│ similarityScore             │
+│ source                      │
+└─────────────────────────────┘
+
+
+
+---------------------------------------------------------
+FUENTES EXTERNAS DEL DOMINIO
+---------------------------------------------------------
+
+
+Track
+ │
+ ├──────── obtenido desde ───────► Spotify
+ │
+ ├──────── obtenido desde ───────► MusicBrainz
+ │
+ ├──────── obtenido desde ───────► Deezer
+ │
+ ├──────── obtenido desde ───────► YouTube
+ │
+ ├──────── obtenido desde ───────► YouTube Music
+ │
+ └──────── obtenido desde ───────► FMA
+
+
+
+---------------------------------------------------------
+RELACIONES CARDINALIDAD
+---------------------------------------------------------
+
+
+Usuario 1 ─────────── N Favorito
+
+Usuario 1 ─────────── N Playlist
+
+Usuario 1 ─────────── N Historial
+
+Playlist 1 ─────────── N Track
+
+Track N ─────────── 1 Álbum
+
+Álbum N ─────────── 1 Artista
+
+Artista 1 ─────────── N Track
+
+Track N ─────────── N Recommendation
+
+
+
+---------------------------------------------------------
+REGLAS DE NEGOCIO
+---------------------------------------------------------
+
+
+1. Un usuario puede escuchar música sin registrarse usando Guest Mode.
+
+2. Un usuario invitado puede buscar canciones,
+   pero no puede crear playlists persistentes.
+
+3. Un usuario registrado puede:
+   - guardar favoritos
+   - crear playlists
+   - editar playlists
+   - eliminar playlists
+
+4. Una playlist contiene múltiples tracks.
+
+5. Un mismo track puede estar en varias playlists.
+
+6. Un track puede venir desde cualquiera
+   de las APIs integradas.
+
+7. El sistema genera recomendaciones
+   según artista, género o similitud textual.
+
+8. La búsqueda agrega resultados desde múltiples fuentes
+   y los fusiona en un formato estándar.
+
+
+=========================================================
+FIN DEL DIAGRAMA DE DOMINIO
+=========================================================
