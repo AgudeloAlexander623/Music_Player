@@ -9,11 +9,15 @@ import favoritesRoutes from "./routes/favorites.routes.js";
 import playlistsRoutes from "./routes/playlists.routes.js";
 import recommendationsRoutes from "./routes/recommendations.routes.js";
 import { initializeDatabase } from "./db/database.js";
+import { validateEnv } from "./utils/validateEnv.js";
+import logger from "./utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
+validateEnv();
 
 const app = express();
 
@@ -35,19 +39,13 @@ const PORT = process.env.PORT || 4000;
 async function start() {
   try {
     await initializeDatabase();
-    console.log('✅ Base de datos conectada');
+    logger.info('Base de datos conectada');
   } catch (error) {
-    console.warn('⚠️  Base de datos no disponible - modo sin BD');
-    console.warn(`   ${error.message}`);
+    logger.warn('Base de datos no disponible - modo sin BD', { error: error.message });
   }
 
   app.listen(PORT, () => {
-    console.log(`\n🚀 Servidor corriendo en puerto ${PORT}`);
-    console.log(`💚 Health: http://localhost:${PORT}/api/health`);
-    console.log(`🎵 Búsqueda: http://localhost:${PORT}/api/search`);
-    console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
-    console.log(`⭐ Favoritos: http://localhost:${PORT}/api/favorites`);
-    console.log(`📋 Playlists: http://localhost:${PORT}/api/playlists\n`);
+    logger.info(`Servidor corriendo en puerto ${PORT}`);
   });
 }
 

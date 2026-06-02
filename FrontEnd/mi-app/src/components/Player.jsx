@@ -17,10 +17,14 @@ function loadVolume() {
 }
 
 function saveVolume(v) {
-  try { localStorage.setItem(VOLUME_KEY, String(v)); } catch { /* localStorage no disponible */ }
+  try { localStorage.setItem(VOLUME_KEY, String(v)); } catch { }
 }
 
+const YT_SOURCES = ['youtube', 'youtube_music'];
+
 export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, onClose }) {
+  const isYouTube = track && YT_SOURCES.includes(track.source);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -29,19 +33,155 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
   const [repeatMode, setRepeatMode] = useState('off');
   const [shuffleMode, setShuffleMode] = useState(false);
   const [audioError, setAudioError] = useState(null);
+  const [ytReady, setYtReady] = useState(false);
+  const [ytApiReady, setYtApiReady] = useState(false);
+
   const audioRef = useRef(null);
   const progressRef = useRef(null);
   const animationRef = useRef(null);
   const prevVolumeRef = useRef(loadVolume());
+  const ytPlayerRef = useRef(null);
+  const ytContainerRef = useRef(null);
+  const trackRef = useRef(track);
+  trackRef.current = track;
+
+  const shuffleRef = useRef(shuffleMode);
+  shuffleRef.current = shuffleMode;
+  const repeatRef = useRef(repeatMode);
+  repeatRef.current = repeatMode;
+  const queueRef = useRef(queue);
+  queueRef.current = queue;
 
   const currentIndex = track ? queue.findIndex((t) => t.id === track.id && t.source === track.source) : -1;
   const hasNext = currentIndex >= 0 && currentIndex < queue.length - 1;
   const hasPrev = currentIndex > 0;
 
+  const ytProgressRef = useRef(null);
+  const ytDurationRef = useRef(0);
+
+  /* ─── Cargar API de YouTube ─── */
   useEffect(() => {
+    if (!isYouTube) return;
+
+    if (window.YT?.ready) {
+      setYtApiReady(true);
+      return;
+    }
+
+    const existing = document.getElementById('youtube-iframe-api');
+    if (existing) return;
+
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    tag.id = 'youtube-iframe-api';
+    const firstScript = document.getElementsByTagName('script')[0];
+    firstScript.parentNode.insertBefore(tag, firstScript);
+
+    window.onYouTubeIframeAPIReady = () => {
+      setYtApiReady(true);
+    };
+
+    return () => {
+      window.onYouTubeIframeAPIReady = null;
+    };
+  }, [isYouTube]);
+
+  /* ─── Crear/destruir YouTube player ─── */
+  useEffect(() => {
+    if (!isYouTube || !track?.videoId || !ytApiReady) return;
+
+    setYtReady(false);
+
+    if (ytPlayerRef.current) {
+      ytPlayerRef.current.destroy();
+      ytPlayerRef.current = null;
+    }
+
+    const onReady = () => {
+      ytDurationRef.current = ytPlayerRef.current.getDuration();
+      setDuration(ytDurationRef.current);
+      setYtReady(true);
+      ytPlayerRef.current.setVolume(Math.round(volume * 100));
+      ytPlayerRef.current.playVideo();
+    };
+
+    const onStateChange = (event) => {
+      if (event.data === YT.PlayerState.PLAYING) {
+        setIsPlaying(true);
+        setAudioError(null);
+        ytDurationRef.current = ytPlayerRef.current.getDuration();
+        setDuration(ytDurationRef.current);
+        if (ytProgressRef.current) cancelAnimationFrame(ytProgressRef.current);
+        const update = () => {
+          if (ytPlayerRef.current) {
+            setCurrentTime(ytPlayerRef.current.getCurrentTime());
+          }
+          ytProgressRef.current = requestAnimationFrame(update);
+        };
+        ytProgressRef.current = requestAnimationFrame(update);
+      } else if (event.data === YT.PlayerState.PAUSED) {
+        setIsPlaying(false);
+        if (ytProgressRef.current) cancelAnimationFrame(ytProgressRef.current);
+      } else if (event.data === YT.PlayerState.ENDED) {
+        setIsPlaying(false);
+        setCurrentTime(0);
+        if (ytProgressRef.current) cancelAnimationFrame(ytProgressRef.current);
+        const q = queueRef.current;
+        if (repeatRef.current === 'one' && ytPlayerRef.current) {
+          ytPlayerRef.current.seekTo(0);
+          ytPlayerRef.current.playVideo();
+        } else if (shuffleRef.current && onPlayNext) {
+          onPlayNext(Math.floor(Math.random() * q.length));
+        } else if (hasNext && onPlayNext) {
+          onPlayNext();
+        } else if (repeatRef.current === 'all' && onPlayNext) {
+          onPlayNext(0);
+        }
+      }
+    };
+
+    const onError = () => {
+      setAudioError('No se pudo reproducir este video');
+      setIsPlaying(false);
+    };
+
+    ytPlayerRef.current = new YT.Player(ytContainerRef.current, {
+      height: '0',
+      width: '0',
+      videoId: track.videoId,
+      playerVars: {
+        autoplay: 0,
+        controls: 0,
+        disablekb: 1,
+        fs: 0,
+        modestbranding: 1,
+        rel: 0,
+      },
+      events: {
+        onReady,
+        onStateChange,
+        onError,
+      },
+    });
+
+    return () => {
+      if (ytProgressRef.current) cancelAnimationFrame(ytProgressRef.current);
+      if (ytPlayerRef.current) {
+        ytPlayerRef.current.destroy();
+        ytPlayerRef.current = null;
+      }
+      setYtReady(false);
+    };
+  }, [isYouTube, track?.videoId, ytApiReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ─── Audio element para fuentes no-YouTube ─── */
+  useEffect(() => {
+    if (isYouTube) return;
+
     const audio = new Audio();
     audio.volume = isMuted ? 0 : volume;
     audioRef.current = audio;
+
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       audio.pause();
@@ -49,7 +189,7 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
       audio.load();
       audioRef.current = null;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isYouTube]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateProgressRef = useRef(null);
 
@@ -62,7 +202,7 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
   }, []);
 
   useEffect(() => {
-    if (!audioRef.current || !track?.previewUrl) return;
+    if (isYouTube || !audioRef.current || !track?.previewUrl) return;
 
     const audio = audioRef.current;
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
@@ -86,15 +226,18 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
       setIsPlaying(false);
       setCurrentTime(0);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      if (repeatMode === 'one') {
+      const q = queueRef.current;
+      if (repeatRef.current === 'one') {
         audio.currentTime = 0;
-        audio.play().catch(() => {});
+        audio.play().catch(() => { });
         setIsPlaying(true);
         animationRef.current = requestAnimationFrame(updateProgressRef.current);
+      } else if (shuffleRef.current && onPlayNext) {
+        onPlayNext(Math.floor(Math.random() * q.length));
       } else if (hasNext && onPlayNext) {
         onPlayNext();
-      } else if (repeatMode === 'all' && onPlayNext) {
-        onPlayNext();
+      } else if (repeatRef.current === 'all' && onPlayNext) {
+        onPlayNext(0);
       }
     };
 
@@ -110,9 +253,20 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
       audio.removeEventListener('ended', onEnded);
     };
-  }, [track, repeatMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isYouTube, track, repeatMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ─── Play / Pause ─── */
   const togglePlay = useCallback(() => {
+    if (isYouTube) {
+      if (!ytPlayerRef.current || !ytReady) return;
+      if (isPlaying) {
+        ytPlayerRef.current.pauseVideo();
+      } else {
+        ytPlayerRef.current.playVideo();
+      }
+      return;
+    }
+
     if (!audioRef.current || !track?.previewUrl) return;
 
     if (isPlaying) {
@@ -131,52 +285,77 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
           setIsPlaying(false);
         });
     }
-  }, [isPlaying, track]);
+  }, [isPlaying, track, isYouTube, ytReady]);
 
+  /* ─── Seek ─── */
   const handleSeek = useCallback((e) => {
-    if (!audioRef.current || !duration) return;
+    if (!duration) return;
     const rect = progressRef.current.getBoundingClientRect();
     const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    audioRef.current.currentTime = percent * duration;
-    setCurrentTime(percent * duration);
-  }, [duration]);
+    const seekTime = percent * duration;
 
+    if (isYouTube && ytPlayerRef.current) {
+      ytPlayerRef.current.seekTo(seekTime);
+    } else if (audioRef.current) {
+      audioRef.current.currentTime = seekTime;
+    }
+    setCurrentTime(seekTime);
+  }, [duration, isYouTube]);
+
+  /* ─── Volumen ─── */
   const handleVolumeChange = useCallback((e) => {
     const value = parseFloat(e.target.value);
     setVolume(value);
     saveVolume(value);
-    if (audioRef.current) {
+    if (isYouTube && ytPlayerRef.current) {
+      ytPlayerRef.current.setVolume(Math.round(value * 100));
+    } else if (audioRef.current) {
       audioRef.current.volume = value;
     }
-    if (value > 0) {
-      prevVolumeRef.current = value;
-    }
+    if (value > 0) prevVolumeRef.current = value;
     setIsMuted(value === 0);
-  }, []);
+  }, [isYouTube]);
 
   const toggleMute = useCallback(() => {
-    if (!audioRef.current) return;
     if (isMuted) {
       const restore = prevVolumeRef.current;
-      audioRef.current.volume = restore;
       setVolume(restore);
       setIsMuted(false);
+      if (isYouTube && ytPlayerRef.current) {
+        ytPlayerRef.current.unMute();
+        ytPlayerRef.current.setVolume(Math.round(restore * 100));
+      } else if (audioRef.current) {
+        audioRef.current.volume = restore;
+      }
     } else {
       prevVolumeRef.current = volume;
-      audioRef.current.volume = 0;
       setVolume(0);
       setIsMuted(true);
+      if (isYouTube && ytPlayerRef.current) {
+        ytPlayerRef.current.mute();
+      } else if (audioRef.current) {
+        audioRef.current.volume = 0;
+      }
     }
-  }, [isMuted, volume]);
+  }, [isMuted, volume, isYouTube]);
 
+  /* ─── Navegación ─── */
   const handleNext = useCallback(() => {
-    if (hasNext && onPlayNext) onPlayNext();
-  }, [hasNext, onPlayNext]);
+    if (!queue.length) return;
+    if (shuffleMode) {
+      if (onPlayNext) onPlayNext(Math.floor(Math.random() * queue.length));
+    } else if (hasNext && onPlayNext) {
+      onPlayNext();
+    } else if (repeatMode === 'all' && onPlayNext) {
+      onPlayNext(0);
+    }
+  }, [hasNext, onPlayNext, shuffleMode, queue.length, repeatMode]);
 
   const handlePrevious = useCallback(() => {
     if (hasPrev && onPlayPrevious) onPlayPrevious();
   }, [hasPrev, onPlayPrevious]);
 
+  /* ─── Modos ─── */
   const toggleRepeat = useCallback(() => {
     setRepeatMode(prev => prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off');
   }, []);
@@ -185,6 +364,7 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
     setShuffleMode(prev => !prev);
   }, []);
 
+  /* ─── Teclado ─── */
   const handleKeyDown = useCallback((e) => {
     if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
       e.preventDefault();
@@ -205,16 +385,22 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
   };
 
   const progressPercent = duration ? (currentTime / duration) * 100 : 0;
+  const canPlay = isYouTube ? ytReady : Boolean(track?.previewUrl);
 
   if (!track) return null;
 
   return (
     <div className="player-bar">
+      {isYouTube && (
+        <div ref={ytContainerRef} className="player-youtube-container" />
+      )}
+
       <div className="player-track-info">
-        {track.albumImage && <img src={track.albumImage} alt="" className="player-image" />}
+        {(track.thumbnail || track.albumImage) && <img src={track.thumbnail || track.albumImage} alt="" className="player-image" />}
         <div className="player-text">
-          <div className="player-name">{track.name}</div>
+          <div className="player-name">{track.title || track.name}</div>
           <div className="player-artist">{track.artist}</div>
+          <div className="player-source-tag">{track.source === 'youtube_music' ? 'YouTube Music' : track.source}</div>
           {audioError && <div className="player-error">{audioError}</div>}
         </div>
       </div>
@@ -225,8 +411,8 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
           <button
             className="player-play-btn"
             onClick={togglePlay}
-            disabled={!track.previewUrl}
-            title={track.previewUrl ? (isPlaying ? 'Pausar' : 'Reproducir') : 'Sin preview disponible'}
+            disabled={!canPlay}
+            title={canPlay ? (isPlaying ? 'Pausar' : 'Reproducir') : 'Cargando...'}
           >
             {isPlaying ? '⏸' : '▶'}
           </button>
@@ -247,17 +433,13 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
           className={`player-mode-btn ${shuffleMode ? 'active' : ''}`}
           onClick={toggleShuffle}
           title={shuffleMode ? 'Aleatorio activo' : 'Aleatorio'}
-        >
-          🔀
-        </button>
+        >🔀</button>
         <button
           className={`player-mode-btn ${repeatMode !== 'off' ? 'active' : ''}`}
           onClick={toggleRepeat}
           title={repeatMode === 'one' ? 'Repetir uno' : repeatMode === 'all' ? 'Repetir todo' : 'Repetir'}
-        >
-          {repeatMode === 'one' ? '🔂' : '🔁'}
-        </button>
-        {!track.previewUrl && <span className="player-no-preview">Sin preview</span>}
+        >{repeatMode === 'one' ? '🔂' : '🔁'}</button>
+        {!canPlay && !isYouTube && <span className="player-no-preview">Sin preview</span>}
         <div className="player-volume">
           <button className="player-volume-btn" onClick={toggleMute} title={isMuted ? 'Activar sonido' : 'Silenciar'}>
             {isMuted || volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}

@@ -140,18 +140,6 @@
   color: #f87171;
 }
 
-.playlist-action-btn.ver {
-  color: #79e0c5;
-}
-
-.playlist-action-btn.edit {
-  color: var(--accent);
-}
-
-.playlist-action-btn.delete {
-  color: #f87171;
-}
-
 .playlist-edit-form {
   padding: 16px 18px;
   display: grid;

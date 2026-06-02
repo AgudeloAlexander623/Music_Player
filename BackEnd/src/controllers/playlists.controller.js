@@ -17,6 +17,7 @@
  * - Valida propiedad del usuario con JWT
  */
 
+import logger from '../utils/logger.js';
 import { insert, findMany, findOne, update, remove } from '../db/database.js';
 
 var track;
@@ -72,7 +73,7 @@ export const createPlaylist = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Create Playlist Error]', error.message);
+    logger.error('Error creando playlist', { error: error.message });
 
     if (error instanceof PlaylistsControllerError) {
       return res.status(error.statusCode).json({
@@ -121,7 +122,7 @@ export const getPlaylists = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Get Playlists Error]', error.message);
+    logger.error('Error obteniendo playlists', { error: error.message });
 
     res.status(500).json({
       error: 'Internal server error',
@@ -192,7 +193,7 @@ export const updatePlaylist = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Update Playlist Error]', error.message);
+    logger.error('Error actualizando playlist', { error: error.message });
 
     if (error instanceof PlaylistsControllerError) {
       return res.status(error.statusCode).json({
@@ -249,7 +250,7 @@ export const deletePlaylist = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Delete Playlist Error]', error.message);
+    logger.error('Error eliminando playlist', { error: error.message });
 
     if (error instanceof PlaylistsControllerError) {
       return res.status(error.statusCode).json({
@@ -338,7 +339,7 @@ export const addTrackToPlaylist = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Add Track to Playlist Error]', error.message);
+    logger.error('Error agregando track a playlist', { error: error.message });
 
     if (error instanceof PlaylistsControllerError) {
       return res.status(error.statusCode).json({
@@ -407,7 +408,7 @@ export const getPlaylistTracks = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Get Playlist Tracks Error]', error.message);
+    logger.error('Error obteniendo tracks de playlist', { error: error.message });
 
     if (error instanceof PlaylistsControllerError) {
       return res.status(error.statusCode).json({
@@ -476,7 +477,7 @@ export const removeTrackFromPlaylist = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Remove Track from Playlist Error]', error.message);
+    logger.error('Error eliminando track de playlist', { error: error.message });
 
     if (error instanceof PlaylistsControllerError) {
       return res.status(error.statusCode).json({

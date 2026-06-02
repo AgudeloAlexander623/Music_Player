@@ -13,6 +13,7 @@
  * - Manejo de errores de BD integrado
  */
 
+import logger from '../utils/logger.js';
 import {
   hashPassword,
   comparePassword,
@@ -116,7 +117,7 @@ export const register = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(`[Register Error] ${error.message}`);
+    logger.error('Error en registro', { error: error.message });
 
     if (error.statusCode) {
       return res.status(error.statusCode).json({
@@ -197,7 +198,7 @@ export const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(`[Login Error] ${error.message}`);
+    logger.error('Error en login', { error: error.message });
 
     if (error.statusCode) {
       return res.status(error.statusCode).json({
@@ -265,7 +266,7 @@ export const verifyTokenEndpoint = async (req, res) => {
       user,
     });
   } catch (error) {
-    console.error(`[Verify Token Error] ${error.message}`);
+    logger.error('Error verificando token', { error: error.message });
 
     if (error.statusCode) {
       return res.status(error.statusCode).json({
@@ -321,7 +322,7 @@ export const guestLogin = async (req, res) => {
       user: { guest: true },
     });
   } catch (error) {
-    console.error(`[Guest Login Error] ${error.message}`);
+    logger.error('Error en guest login', { error: error.message });
 
     return res.status(500).json({
       error: 'Guest login failed',

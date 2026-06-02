@@ -1,0 +1,19 @@
+Usuario
+   │
+   ▼
+Favorites.jsx
+   │
+   ▼
+favorites.controller.js
+   │
+   ▼
+verifyTokenMiddleware.js
+   │
+   ▼
+favorites table (MySQL)
+   │
+   ▼
+respuesta JSON
+   │
+   ▼
+Frontend actualiza UI

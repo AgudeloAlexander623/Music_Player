@@ -28,14 +28,14 @@ export default function ContentSection({ title, items, badge, onFilter, filterVa
               value={filterValue}
               onChange={(e) => onFilter(e.target.value)}
             />
-            <button className="filter-btn">🔽</button>
+            <button className="filter-btn" aria-label="Filtrar">🔽</button>
           </div>
         )}
 
         {hasNavigation && (
           <div className="nav-buttons">
-            <button className="nav-btn" onClick={scrollLeft}>‹</button>
-            <button className="nav-btn" onClick={scrollRight}>›</button>
+            <button className="nav-btn" onClick={scrollLeft} aria-label="Desplazar izquierda">‹</button>
+            <button className="nav-btn" onClick={scrollRight} aria-label="Desplazar derecha">›</button>
           </div>
         )}
       </div>
@@ -46,7 +46,7 @@ export default function ContentSection({ title, items, badge, onFilter, filterVa
             <div className="item-image">
               <img src={item.image || 'https://via.placeholder.com/180'} alt={item.name} />
               <div className="item-overlay">
-                <button className="play-btn" onClick={() => onPlay?.(item)}>▶</button>
+                <button className="play-btn" onClick={() => onPlay?.(item)} aria-label={`Reproducir ${item.name}`}>▶</button>
               </div>
             </div>
             <div className="item-info">

@@ -1,0 +1,17 @@
+Usuario
+   │
+   ▼
+Playlists.jsx
+   │
+   ▼
+playlists.controller.js
+   │
+   ▼
+requireRealUser.js
+   │
+   ▼
+playlists table
+playlist_tracks table
+   │
+   ▼
+respuesta al frontend

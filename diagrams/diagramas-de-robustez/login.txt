@@ -1,0 +1,17 @@
+Usuario
+   │
+   ▼
+Login.jsx / Register.jsx
+   │
+   ▼
+AuthContext.jsx
+   │
+   ▼
+AuthController.js
+   │
+   ├─ bcrypt
+   ├─ JWT
+   └─ verifyTokenMiddleware
+   │
+   ▼
+MySQL Users Table

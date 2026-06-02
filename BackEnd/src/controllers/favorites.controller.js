@@ -12,6 +12,7 @@
  * - Previene duplicados con unique key
  */
 
+import logger from '../utils/logger.js';
 import { insert, findMany, remove, findOne } from '../db/database.js';
 
 class FavoritesControllerError extends Error {
@@ -97,7 +98,7 @@ export const addFavorite = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Add Favorite Error]', error.message);
+    logger.error('Error agregando favorito', { error: error.message });
 
     if (error instanceof FavoritesControllerError) {
       return res.status(error.statusCode).json({
@@ -153,7 +154,7 @@ export const getFavorites = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Get Favorites Error]', error.message);
+    logger.error('Error obteniendo favoritos', { error: error.message });
 
     res.status(500).json({
       error: 'Internal server error',
@@ -211,7 +212,7 @@ export const removeFavorite = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Remove Favorite Error]', error.message);
+    logger.error('Error eliminando favorito', { error: error.message });
 
     if (error instanceof FavoritesControllerError) {
       return res.status(error.statusCode).json({

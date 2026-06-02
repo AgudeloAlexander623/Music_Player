@@ -1,170 +1,114 @@
 -- ===========================================
 -- REPRODUCTOR DE MÚSICA - SCHEMA DE BASE DE DATOS
+-- PostgreSQL 16+
 -- ===========================================
 
--- Crear base de datos (usando nombre más descriptivo)
-CREATE DATABASE IF NOT EXISTS `reproductor_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `reproductor_db`;
+-- Crear base de datos (ejecutar como superusuario)
+-- CREATE DATABASE reproductor_db;
+-- \c reproductor_db;
 
 -- ===========================================
 -- TABLA: USUARIOS
 -- ===========================================
--- Almacena información de autenticación de usuarios
--- Campos:
---   id: identificador único
---   email: email único para login (UNIQUE)
---   password_hash: contraseña hasheada con bcryptjs
---   created_at: timestamp de creación
---   updated_at: timestamp de última actualización
---
 
-CREATE TABLE IF NOT EXISTS `users` (
-    `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `email` VARCHAR(255) NOT NULL UNIQUE COLLATE utf8mb4_unicode_ci,
-    `password_hash` VARCHAR(255) NOT NULL,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX `idx_email` (`email`)
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 
 -- ===========================================
 -- TABLA: FAVORITOS (TRACKS)
 -- ===========================================
--- Almacena canciones favoritas de usuarios
--- Campos:
---   id: identificador único
---   user_id: referencia a usuario
---   external_track_id: ID del track en Spotify o MusicBrainz
---   source: 'spotify' o 'musicbrainz'
---   track_title: nombre de la canción
---   artist: artista
---   album: álbum
---   preview_url: URL del preview (si existe)
---   added_at: timestamp de cuándo se agregó a favoritos
---
 
-CREATE TABLE IF NOT EXISTS `favorite_tracks` (
-    `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `user_id` INT NOT NULL,
-    `external_track_id` VARCHAR(255) NOT NULL,
-    `source` ENUM('spotify', 'musicbrainz', 'fma') NOT NULL,
-    `track_title` VARCHAR(255) NOT NULL,
-    `artist` VARCHAR(255),
-    `album` VARCHAR(255),
-    `album_image` TEXT,
-    `preview_url` TEXT,
-    `added_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-    UNIQUE KEY `unique_user_track` (`user_id`, `external_track_id`, `source`),
-    INDEX `idx_user_id` (`user_id`),
-    INDEX `idx_added_at` (`added_at`)
+CREATE TABLE IF NOT EXISTS favorite_tracks (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    external_track_id VARCHAR(255) NOT NULL,
+    source VARCHAR(50) NOT NULL CHECK (source IN ('spotify', 'musicbrainz', 'fma', 'youtube', 'youtube-music', 'deezer')),
+    track_title VARCHAR(255) NOT NULL,
+    artist VARCHAR(255),
+    album VARCHAR(255),
+    album_image TEXT,
+    preview_url TEXT,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, external_track_id, source)
 );
 
--- Si la tabla ya existe, ejecutar manualmente:
--- ALTER TABLE favorite_tracks ADD COLUMN album_image TEXT AFTER album;
--- ALTER TABLE playlist_tracks ADD COLUMN album_image TEXT AFTER album;
--- ALTER TABLE favorite_tracks MODIFY COLUMN source ENUM('spotify','musicbrainz','fma','youtube','youtube-music','deezer') NOT NULL;
--- ALTER TABLE playlist_tracks MODIFY COLUMN source ENUM('spotify','musicbrainz','fma','youtube','youtube-music','deezer') NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_favorite_tracks_user_id ON favorite_tracks (user_id);
+CREATE INDEX IF NOT EXISTS idx_favorite_tracks_added_at ON favorite_tracks (added_at);
 
 -- ===========================================
 -- TABLA: HISTORIAL DE BÚSQUEDAS
 -- ===========================================
--- Guarda el historial de búsquedas de cada usuario
--- Campos:
---   id: identificador único
---   user_id: referencia a usuario
---   query: término de búsqueda
---   results_count: cuántos resultados se encontraron
---   searched_at: timestamp de la búsqueda
---
 
-CREATE TABLE IF NOT EXISTS `search_history` (
-    `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `user_id` INT NOT NULL,
-    `query` VARCHAR(255) NOT NULL,
-    `results_count` INT DEFAULT 0,
-    `searched_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-    INDEX `idx_user_id` (`user_id`),
-    INDEX `idx_searched_at` (`searched_at`)
+CREATE TABLE IF NOT EXISTS search_history (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    query VARCHAR(255) NOT NULL,
+    results_count INTEGER DEFAULT 0,
+    searched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_search_history_user_id ON search_history (user_id);
+CREATE INDEX IF NOT EXISTS idx_search_history_searched_at ON search_history (searched_at);
 
 -- ===========================================
 -- TABLA: PLAYLISTS
 -- ===========================================
--- Define playlists creadas por usuarios
--- Campos:
---   id: identificador único
---   user_id: referencia a usuario propietario
---   name: nombre de la playlist
---   description: descripción (opcional)
---   created_at: timestamp de creación
---   updated_at: timestamp de última actualización
---
 
-CREATE TABLE IF NOT EXISTS `playlists` (
-    `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `user_id` INT NOT NULL,
-    `name` VARCHAR(255) NOT NULL,
-    `description` TEXT,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-    INDEX `idx_user_id` (`user_id`)
+CREATE TABLE IF NOT EXISTS playlists (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_playlists_user_id ON playlists (user_id);
 
 -- ===========================================
 -- TABLA: CANCIONES EN PLAYLISTS
 -- ===========================================
--- Relaciona tracks con playlists
--- Campos:
---   id: identificador único
---   playlist_id: referencia a playlist
---   external_track_id: ID del track en API externa
---   source: 'spotify' o 'musicbrainz'
---   track_title: nombre de la canción
---   artist: artista
---   album: álbum
---   preview_url: URL del preview
---   added_at: timestamp de cuándo se agregó a la playlist
---
 
-CREATE TABLE IF NOT EXISTS `playlist_tracks` (
-    `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `playlist_id` INT NOT NULL,
-    `external_track_id` VARCHAR(255) NOT NULL,
-    `source` ENUM('spotify', 'musicbrainz', 'fma') NOT NULL,
-    `track_title` VARCHAR(255) NOT NULL,
-    `artist` VARCHAR(255),
-    `album` VARCHAR(255),
-    `album_image` TEXT,
-    `preview_url` TEXT,
-    `added_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`playlist_id`) REFERENCES `playlists`(`id`) ON DELETE CASCADE,
-    INDEX `idx_playlist_id` (`playlist_id`)
+CREATE TABLE IF NOT EXISTS playlist_tracks (
+    id SERIAL PRIMARY KEY,
+    playlist_id INTEGER NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+    external_track_id VARCHAR(255) NOT NULL,
+    source VARCHAR(50) NOT NULL CHECK (source IN ('spotify', 'musicbrainz', 'fma', 'youtube', 'youtube-music', 'deezer')),
+    track_title VARCHAR(255) NOT NULL,
+    artist VARCHAR(255),
+    album VARCHAR(255),
+    album_image TEXT,
+    preview_url TEXT,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ===========================================
--- TABLA: SESIONES (OPCIONAL PARA FUTURO)
--- ===========================================
--- Podría almacenar sesiones activas si fuera necesario refresh tokens
--- Por ahora, JWT es stateless, no requiere tabla de sesiones
+CREATE INDEX IF NOT EXISTS idx_playlist_tracks_playlist_id ON playlist_tracks (playlist_id);
 
 -- ===========================================
--- COMENTARIOS Y QUERIES DE REFERENCIA
+-- TRIGGER: actualizar updated_at automáticamente
 -- ===========================================
 
--- Ver todos los usuarios
--- SELECT * FROM users;
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
--- Ver los favoritos de un usuario
--- SELECT * FROM favorite_tracks WHERE user_id = 1 ORDER BY added_at DESC;
+CREATE TRIGGER trg_users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
--- Ver historial de búsquedas de un usuario
--- SELECT * FROM search_history WHERE user_id = 1 ORDER BY searched_at DESC LIMIT 20;
-
--- Ver playlists de un usuario
--- SELECT * FROM playlists WHERE user_id = 1 ORDER BY created_at DESC;
-
--- Ver tracks en una playlist
--- SELECT * FROM playlist_tracks WHERE playlist_id = 1 ORDER BY added_at DESC;
+CREATE TRIGGER trg_playlists_updated_at
+    BEFORE UPDATE ON playlists
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();

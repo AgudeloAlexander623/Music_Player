@@ -1,0 +1,341 @@
+=========================================================
+DIAGRAMA DE CLASES UML — REPRODUCTOR
+=========================================================
+
+
+---------------------------------------------------------
+ENTITY CLASSES (DATABASE)
+---------------------------------------------------------
+
++-------------------+
+| User              |
++-------------------+
+| id: number        |
+| name: string      |
+| email: string     |
+| password: string  |
+| createdAt: date   |
++-------------------+
+| register()        |
+| login()           |
+| verifyToken()     |
++-------------------+
+
+
++-------------------+
+| Favorite          |
++-------------------+
+| id: number        |
+| userId: number    |
+| trackId: string   |
+| createdAt: date   |
++-------------------+
+| add()             |
+| remove()          |
+| list()            |
++-------------------+
+
+
++-------------------------+
+| Playlist                |
++-------------------------+
+| id: number              |
+| userId: number          |
+| name: string            |
+| createdAt: date         |
++-------------------------+
+| create()                |
+| update()                |
+| delete()                |
+| getTracks()             |
++-------------------------+
+
+
++-----------------------------+
+| PlaylistTrack               |
++-----------------------------+
+| id: number                  |
+| playlistId: number          |
+| trackId: string             |
+| trackName: string           |
+| artist: string              |
+| album: string               |
+| albumImage: string          |
+| previewUrl: string|null     |
+| duration: number|null       |
+| source: string              |
++-----------------------------+
+| addTrack()                  |
+| removeTrack()               |
++-----------------------------+
+
+
++-----------------------------+
+| Track                       |
++-----------------------------+
+| id: string                  |
+| name: string                |
+| artist: string              |
+| album: string               |
+| albumImage: string          |
+| previewUrl: string|null     |
+| duration: number|null       |
+| source: string              |
++-----------------------------+
+| normalize()                 |
+| formatTrack()              |
++-----------------------------+
+
+
+
+---------------------------------------------------------
+BACKEND CONTROLLERS
+---------------------------------------------------------
+
++-----------------------------+
+| AuthController              |
++-----------------------------+
+| register(req,res)           |
+| login(req,res)              |
+| guest(req,res)              |
+| verify(req,res)             |
++-----------------------------+
+
+
++-----------------------------+
+| SearchController            |
++-----------------------------+
+| search(req,res)             |
+| getTrending(req,res)        |
++-----------------------------+
+
+
++-----------------------------+
+| FavoritesController         |
++-----------------------------+
+| getFavorites(req,res)       |
+| addFavorite(req,res)        |
+| deleteFavorite(req,res)     |
++-----------------------------+
+
+
++-----------------------------+
+| PlaylistsController         |
++-----------------------------+
+| getPlaylists(req,res)       |
+| createPlaylist(req,res)     |
+| updatePlaylist(req,res)     |
+| deletePlaylist(req,res)     |
+| addTrack(req,res)           |
+| removeTrack(req,res)        |
++-----------------------------+
+
+
++-----------------------------------+
+| RecommendationsController         |
++-----------------------------------+
+| getRecommendations(req,res)       |
+| getStatus(req,res)                |
++-----------------------------------+
+
+
+
+---------------------------------------------------------
+SERVICES
+---------------------------------------------------------
+
++-------------------------------+
+| SpotifyService                |
++-------------------------------+
+| getToken()                    |
+| searchTracks()                |
+| refreshToken()                |
++-------------------------------+
+
+
++-------------------------------+
+| YouTubeService                |
++-------------------------------+
+| searchTracks()                |
+| getVideoPreview()             |
+| getCachedResults()            |
++-------------------------------+
+
+
++-------------------------------+
+| DeezerService                 |
++-------------------------------+
+| searchTracks()                |
++-------------------------------+
+
+
++-------------------------------+
+| MusicBrainzService            |
++-------------------------------+
+| searchTracks()                |
+| fetchCoverArt()               |
++-------------------------------+
+
+
++-------------------------------+
+| FMAService                    |
++-------------------------------+
+| searchTracks()                |
++-------------------------------+
+
+
++--------------------------------+
+| PythonRecommendationService    |
++--------------------------------+
+| recommend()                    |
+| healthCheck()                  |
++--------------------------------+
+
+
+
+---------------------------------------------------------
+DATABASE LAYER
+---------------------------------------------------------
+
++-----------------------------+
+| Database                    |
++-----------------------------+
+| connect()                   |
+| query()                     |
+| execute()                   |
+| close()                     |
++-----------------------------+
+
+
+
+---------------------------------------------------------
+FRONTEND COMPONENTS
+---------------------------------------------------------
+
++-----------------------------+
+| App                         |
++-----------------------------+
+| currentTrack                |
+| setCurrentTrack()           |
+| routes                      |
++-----------------------------+
+
+
++-----------------------------+
+| AuthContext                 |
++-----------------------------+
+| user                        |
+| token                       |
+| login()                     |
+| logout()                    |
+| verify()                    |
++-----------------------------+
+
+
++-----------------------------+
+| Dashboard                   |
++-----------------------------+
+| searchQuery                 |
+| results                     |
+| loading                     |
++-----------------------------+
+
+
++-----------------------------+
+| SearchResults               |
++-----------------------------+
+| tracks                      |
+| page                        |
+| loading                     |
+| loadMore()                  |
++-----------------------------+
+
+
++-----------------------------+
+| Player                      |
++-----------------------------+
+| currentTrack                |
+| isPlaying                   |
+| currentTime                 |
+| duration                    |
++-----------------------------+
+| play()                      |
+| pause()                     |
+| seek()                      |
+| updateProgress()            |
++-----------------------------+
+
+
++-----------------------------+
+| FavoritesPage               |
++-----------------------------+
+| favorites                   |
+| loading                     |
++-----------------------------+
+
+
++-----------------------------+
+| PlaylistsPage               |
++-----------------------------+
+| playlists                   |
+| createPlaylist()            |
+| deletePlaylist()            |
++-----------------------------+
+
+
++-----------------------------+
+| ProfilePage                 |
++-----------------------------+
+| userInfo                    |
+| stats                       |
++-----------------------------+
+
+
+
+---------------------------------------------------------
+RELATIONSHIPS
+---------------------------------------------------------
+
+User "1" -------- "N" Favorite
+
+User "1" -------- "N" Playlist
+
+Playlist "1" -------- "N" PlaylistTrack
+
+PlaylistTrack "N" -------- "1" Track
+
+
+SearchController --> SpotifyService
+SearchController --> YouTubeService
+SearchController --> DeezerService
+SearchController --> MusicBrainzService
+SearchController --> FMAService
+
+RecommendationsController --> PythonRecommendationService
+
+FavoritesController --> Database
+
+PlaylistsController --> Database
+
+AuthController --> Database
+
+App --> Player
+
+Dashboard --> SearchResults
+
+SearchResults --> Track
+
+Player --> Track
+
+FavoritesPage --> Track
+
+PlaylistsPage --> Playlist
+
+Playlist --> PlaylistTrack
+
+Track --> Player
+
+
+=========================================================
+FIN DEL DIAGRAMA
+=========================================================

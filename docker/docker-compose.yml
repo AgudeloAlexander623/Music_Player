@@ -1,22 +1,21 @@
 version: "3.9"
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: reproductor-mysql
+  postgres:
+    image: postgres:16
+    container_name: reproductor-postgres
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "${DB_PORT:-5432}:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
       - ../BackEnd/src/db/DataBases.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,12 +30,12 @@ services:
     container_name: reproductor-backend
     restart: unless-stopped
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
     environment:
       - NODE_ENV=production
       - PORT=4000
-      - DB_HOST=mysql
+      - DB_HOST=postgres
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
@@ -44,6 +43,7 @@ services:
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - FMA_API_KEY=${FMA_API_KEY}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - PYTHON_SERVICE_URL=http://python-service:8000
     expose:
@@ -79,7 +79,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.frontend
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/api}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
     container_name: reproductor-frontend
     restart: unless-stopped
     depends_on:
@@ -90,7 +90,7 @@ services:
       - reproductor-network
 
 volumes:
-  mysql_data:
+  postgres_data:
     driver: local
 
 networks:

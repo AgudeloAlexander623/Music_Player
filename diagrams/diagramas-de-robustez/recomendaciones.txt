@@ -1,0 +1,22 @@
+Usuario
+   │
+   ▼
+Dashboard.jsx
+   │
+   ▼
+RecommendationsController.js
+   │
+   ▼
+python.services.js
+   │
+   ▼
+FastAPI /recommend
+   │
+   ▼
+TF-IDF Recommendation Engine
+   │
+   ▼
+JSON recommendations[]
+   │
+   ▼
+ContentSection.jsx

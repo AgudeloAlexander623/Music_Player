@@ -47,10 +47,10 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
       await api.post(`/playlists/${playlistId}/tracks`, {
         external_track_id: track.id,
         source: track.source || 'spotify',
-        track_title: track.name,
+        track_title: track.name || track.title,
         artist: track.artist,
         album: track.album,
-        album_image: track.albumImage,
+        album_image: track.albumImage || track.thumbnail,
         preview_url: track.previewUrl,
       });
       toast.success('Agregado a la playlist');
@@ -85,28 +85,36 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
   return (
     <div className="search-results">
       <div className="filter-bar">
-        <button className="filter-btn" onClick={() => setFilter('all')} disabled={filter === 'all'}>
+        <button className="source-filter-btn" onClick={() => setFilter('all')} disabled={filter === 'all'}>
           Todos
         </button>
-        <button className="filter-btn" onClick={() => setFilter('spotify')} disabled={filter === 'spotify'}>
+        <button className="source-filter-btn" onClick={() => setFilter('spotify')} disabled={filter === 'spotify'}>
           Spotify
         </button>
-        <button className="filter-btn" onClick={() => setFilter('musicbrainz')} disabled={filter === 'musicbrainz'}>
+        <button className="source-filter-btn" onClick={() => setFilter('musicbrainz')} disabled={filter === 'musicbrainz'}>
           MusicBrainz
         </button>
-        <button className="filter-btn" onClick={() => setFilter('fma')} disabled={filter === 'fma'}>
+        <button className="source-filter-btn" onClick={() => setFilter('fma')} disabled={filter === 'fma'}>
           FMA
         </button>
-        <button className="filter-btn" onClick={() => setFilter('youtube')} disabled={filter === 'youtube'}>
+        <button className="source-filter-btn" onClick={() => setFilter('youtube')} disabled={filter === 'youtube'}>
           YouTube
         </button>
-        <button className="filter-btn" onClick={() => setFilter('youtube-music')} disabled={filter === 'youtube-music'}>
+        <button className="source-filter-btn" onClick={() => setFilter('youtube-music')} disabled={filter === 'youtube-music'}>
           YouTube Music
         </button>
-        <button className="filter-btn" onClick={() => setFilter('deezer')} disabled={filter === 'deezer'}>
+        <button className="source-filter-btn" onClick={() => setFilter('deezer')} disabled={filter === 'deezer'}>
           Deezer
         </button>
       </div>
+
+      {filtered.length === 0 && (
+        <p className="search-empty">
+          {results.length === 0
+            ? 'Sin resultados. Intenta con otra búsqueda.'
+            : 'No hay resultados para este filtro.'}
+        </p>
+      )}
 
       <div className="track-list">
         {filtered.map((track) => (
@@ -118,7 +126,7 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
               <img src={track.albumImage} alt="" className="track-image" />
             )}
             <div className="track-info">
-              <div className="track-name">{track.name}</div>
+              <div className="track-name">{track.name || track.title}</div>
               <div className="track-artist">{track.artist}</div>
               <div className="track-meta">
                 {track.source && (
@@ -131,18 +139,19 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
             </div>
             <div className="track-actions">
               {/**
-               * El botón de play se deshabilita si el track no tiene previewUrl.
-               * Esto evita que el usuario intente reproducir algo que no suena.
-               * Spotify ya no devuelve previews y MusicBrainz es solo metadata.
-               * Solo FMA y algunos tracks antiguos de Spotify tienen audio.
+               * YouTube/YouTube Music se reproducen vía IFrame API.
+               * FMA, Deezer y Spotify usan previewUrl directo.
+               * MusicBrainz es metadata-only (sin preview).
                */}
               <button
-                className={`track-btn ${!track.previewUrl ? 'track-btn-disabled' : ''}`}
-                onClick={() => track.previewUrl && onPlay(track)}
-                disabled={!track.previewUrl}
-                title={track.previewUrl ? 'Reproducir' : 'Sin preview disponible'}
-              >
-                {track.previewUrl ? '▶️' : '🔇'}
+                className={`track-btn ${track.source === 'musicbrainz' ? 'track-btn-disabled' : ''}`}
+                onClick={() => onPlay(track)}
+                disabled={track.source === 'musicbrainz'}
+                title={
+                  track.source === 'musicbrainz' ? 'Metadata only - sin audio' :
+                  'Reproducir'
+                }
+              >▶️
               </button>
               <button className="track-btn" onClick={() => onAddFavorite(track)} title="Agregar a favoritos">
                 ❤️

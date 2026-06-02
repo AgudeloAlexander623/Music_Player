@@ -1,0 +1,21 @@
+Usuario
+   │
+   ▼
+Click en Track Card
+   │
+   ▼
+currentTrack state
+   │
+   ▼
+Player.jsx
+   │
+   ▼
+<audio src={previewUrl}>
+   │
+   ├─ play
+   ├─ pause
+   ├─ timeupdate
+   ├─ seek
+   │
+   ▼
+Salida de audio navegador

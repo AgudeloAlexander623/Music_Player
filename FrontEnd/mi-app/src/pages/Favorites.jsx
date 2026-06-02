@@ -51,7 +51,11 @@ export default function Favorites() {
     setCurrentTrack(mapFavoriteToTrack(fav));
   };
 
-  const handlePlayNext = () => {
+  const handlePlayNext = (index) => {
+    if (index !== undefined && queue[index]) {
+      setCurrentTrack(queue[index]);
+      return;
+    }
     if (!currentTrack) return;
     const idx = queue.findIndex((t) => t.id === currentTrack.id && t.source === currentTrack.source);
     if (idx >= 0 && idx < queue.length - 1) {

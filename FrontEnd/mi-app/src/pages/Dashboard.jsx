@@ -130,7 +130,11 @@ export default function Dashboard() {
     setQueue([newTrack]);
   };
 
-  const handlePlayNext = () => {
+  const handlePlayNext = (index) => {
+    if (index !== undefined && queue[index]) {
+      setCurrentTrack(queue[index]);
+      return;
+    }
     const idx = queue.findIndex((t) => t.id === currentTrack?.id);
     if (idx >= 0 && idx < queue.length - 1) {
       setCurrentTrack(queue[idx + 1]);
@@ -153,10 +157,10 @@ export default function Dashboard() {
       await api.post('/favorites', {
         external_track_id: track.id,
         source: track.source || 'spotify',
-        track_title: track.name,
+        track_title: track.name || track.title,
         artist: track.artist,
         album: track.album,
-        album_image: track.albumImage,
+        album_image: track.albumImage || track.thumbnail,
         preview_url: track.previewUrl,
       });
       toast.success('Agregado a favoritos');
@@ -196,7 +200,7 @@ export default function Dashboard() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <button type="submit" className="dashboard-search-btn" disabled={searching}>
+          <button type="submit" className="dashboard-search-btn" disabled={searching} aria-label="Buscar">
             {searching ? 'Buscando...' : '🔍'}
           </button>
         </form>

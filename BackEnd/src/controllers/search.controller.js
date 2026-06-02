@@ -1,8 +1,5 @@
-import { searchSpotify } from '../services/spotify.services.js';
-import { searchMusicBrainz } from '../services/musicbrainz.service.js';
-import { searchFMA } from '../services/fma.services.js';
-import { searchYouTube, searchYouTubeMusic } from '../services/youtube.services.js';
-import { searchDeezer } from '../services/deezer.services.js';
+import logger from '../utils/logger.js';
+import pluginRegistry from '../services/plugins/index.js';
 import { mergeResults } from '../utils/mergeResults.js';
 import { insert } from '../db/database.js';
 
@@ -33,33 +30,18 @@ export const searchController = async (req, res) => {
       Math.max(1, parseInt(req.query.limit) || DEFAULT_LIMIT)
     );
 
-    const sources = [
-      { name: 'Spotify', fn: () => searchSpotify(query, limit) },
-      { name: 'MusicBrainz', fn: () => searchMusicBrainz(query, limit) },
-      { name: 'FMA', fn: () => searchFMA(query, page, limit) },
-      { name: 'YouTube', fn: () => searchYouTube(query, limit) },
-      { name: 'YouTubeMusic', fn: () => searchYouTubeMusic(query, limit) },
-      { name: 'Deezer', fn: () => searchDeezer(query, limit) },
-    ];
+    const { results, errors } = await pluginRegistry.searchAll(query, { limit, page });
 
-    const results = {};
-    const errors = [];
+    const availablePlugins = pluginRegistry.getAvailable();
 
-    for (const { name, fn } of sources) {
-      try {
-        results[name] = await fn();
-      } catch (error) {
-        errors.push({
-          service: name,
-          message: error.message,
-          statusCode: error.statusCode || 500,
-        });
-        results[name] = [];
-        console.error(`[${name} Error] ${error.message}`);
-      }
+    if (availablePlugins.length === 0) {
+      return res.status(500).json({
+        error: "No search plugins are available",
+        details: "All search services are disabled due to missing configuration",
+      });
     }
 
-    if (errors.length === sources.length) {
+    if (errors.length === availablePlugins.length) {
       return res.status(500).json({
         error: "All search services failed",
         details: Object.fromEntries(
@@ -68,14 +50,7 @@ export const searchController = async (req, res) => {
       });
     }
 
-    const finalResults = mergeResults(
-      results.Spotify,
-      results.MusicBrainz,
-      results.FMA,
-      results.YouTube,
-      results.Deezer,
-      results.YouTubeMusic
-    );
+    const finalResults = mergeResults(results);
 
     if (req.user) {
       try {
@@ -85,7 +60,7 @@ export const searchController = async (req, res) => {
           results_count: finalResults.length,
         });
       } catch (error) {
-        console.warn(`[History Error] Could not save search history: ${error.message}`);
+        logger.warn('No se pudo guardar historial de búsqueda', { error: error.message });
       }
     }
 
@@ -99,7 +74,7 @@ export const searchController = async (req, res) => {
         limit,
       },
       sources: Object.fromEntries(
-        sources.map(({ name }) => [name.toLowerCase(), results[name].length])
+        availablePlugins.map((p) => [p.name, results[p.name]?.length ?? 0])
       ),
     };
 
@@ -110,7 +85,7 @@ export const searchController = async (req, res) => {
     const statusCode = warnings.length > 0 ? 206 : 200;
     return res.status(statusCode).json(response);
   } catch (error) {
-    console.error(`[Unexpected Error] ${error.message}`, error);
+    logger.error('Error inesperado en búsqueda', { error: error.message });
     return res.status(500).json({
       error: "Unexpected error during search",
       details: error.message,

@@ -15,6 +15,7 @@
  * router.get('/protected', verifyToken, controllerFunction);
  */
 
+import logger from '../utils/logger.js';
 import { verifyToken, extractTokenFromHeader } from '../services/auth.service.js';
 
 export const verifyTokenMiddleware = (req, res, next) => {
@@ -52,7 +53,7 @@ export const verifyTokenMiddleware = (req, res, next) => {
     // Continuar al siguiente middleware/controller
     next();
   } catch (error) {
-    console.error(`[Token Verification Error] ${error.message}`);
+    logger.error('Error verificando token', { error: error.message });
 
     // Errores de token
     if (error.statusCode === 401) {
@@ -104,7 +105,7 @@ export const optionalVerifyTokenMiddleware = (req, res, next) => {
     };
   } catch (error) {
     // Ignorar errores de token en middleware opcional
-    console.warn(`[Optional Token Verification] Token validation skipped: ${error.message}`);
+    logger.warn('Token validation skipped (optional)', { error: error.message });
   }
 
   next();

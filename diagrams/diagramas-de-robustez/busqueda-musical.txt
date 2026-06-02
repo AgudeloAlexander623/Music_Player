@@ -1,0 +1,22 @@
+Usuario
+   │
+   ▼
+Search Bar (Dashboard.jsx)
+   │
+   ▼
+SearchResults.jsx
+   │
+   ▼
+SearchController.js
+   │
+   ├── SpotifyService
+   ├── YouTubeService
+   ├── DeezerService
+   ├── MusicBrainzService
+   ├── FMAService
+   │
+   ▼
+mergeResults.js
+   │
+   ▼
+Frontend renderiza tarjetas de canciones

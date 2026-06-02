@@ -9,7 +9,7 @@
   flex-wrap: wrap;
 }
 
-.filter-btn {
+.source-filter-btn {
   padding: 8px 18px;
   border-radius: 16px;
   border: 1px solid var(--line);
@@ -20,12 +20,12 @@
   transition: all 0.15s;
 }
 
-.filter-btn:hover:not(:disabled) {
+.source-filter-btn:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--text);
 }
 
-.filter-btn:disabled {
+.source-filter-btn:disabled {
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   color: #091117;
   border-color: transparent;
@@ -136,23 +136,11 @@
   flex-shrink: 0;
 }
 
-.track-btn {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  font-size: 1rem;
-  transition: background 0.15s;
-}
-
-.track-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.track-btn-disabled {
-  opacity: 0.4;
+.search-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .track-playlist-dropdown {

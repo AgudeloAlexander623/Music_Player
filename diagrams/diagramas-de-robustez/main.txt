@@ -1,0 +1,51 @@
+ACTOR
+│
+▼
+Usuario
+│
+├─────────────── BOUNDARY ────────────────┐
+│                                         │
+▼                                         ▼
+Login.jsx                           Dashboard.jsx
+Favorites.jsx                       Playlists.jsx
+SearchResults.jsx                   Player.jsx
+Profile.jsx
+│
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+────────────── CONTROL ──────────────
+                    │
+      AuthController
+      SearchController
+      FavoritesController
+      PlaylistsController
+      RecommendationsController
+                    │
+                    ▼
+────────────── SERVICES ─────────────
+                    │
+   SpotifyService
+   YouTubeService
+   DeezerService
+   MusicBrainzService
+   FMAService
+   PythonRecommendationService
+                    │
+                    ▼
+────────────── ENTITY ───────────────
+                    │
+   MySQL Database
+   Users
+   Favorites
+   Playlists
+   PlaylistTracks
+                    │
+   APIs externas:
+   Spotify API
+   YouTube API
+   Deezer API
+   MusicBrainz API
+   FMA API
+                    │
+   Python FastAPI Recommendation Engine
