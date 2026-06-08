@@ -1,479 +1,250 @@
-# 🎵 REPRODUCTOR DE MÚSICA
+# Reproductor de Música
 
-> **Spotify-Inspired Music App (Proyecto Legal & Educativo)**
+Aplicación web fullstack inspirada en Spotify, construida con Node.js, React y PostgreSQL. Integra múltiples APIs públicas para buscar y reproducir música.
 
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-19+-blue.svg)](https://reactjs.org/)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0+-orange.svg)](https://mysql.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://postgresql.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-## 📋 Descripción
+## Tecnologías
 
-Este proyecto es una **aplicación web fullstack** inspirada en Spotify, desarrollada con fines educativos, que demuestra cómo construir una plataforma musical moderna utilizando APIs públicas y datos abiertos.
-
-**🎯 Objetivos principales:**
-- ✅ Aprender arquitectura fullstack moderna
-- ✅ Integrar múltiples APIs musicales de forma legal
-- ✅ Implementar autenticación JWT segura
-- ✅ Manejar datos musicales reales
-- ✅ Crear un proyecto sólido para portafolio
-
-**⚠️ Importante:** Este proyecto respeta completamente las limitaciones legales relacionadas con derechos de autor. NO busca reemplazar Spotify ni distribuir contenido protegido.
+**Frontend:** React 19, Vite 8, React Router 7, Axios
+**Backend:** Node.js, Express 5, JWT, Winston, bcryptjs
+**Base de datos:** PostgreSQL 15+ con `pg` (pool de conexiones)
+**APIs externas:** Spotify, Deezer, YouTube, YouTube Music, MusicBrainz, Free Music Archive
+**Infraestructura:** Docker, Docker Compose, Nginx
 
 ---
 
-## 🛠️ Tecnologías Utilizadas
+## Requisitos
 
-### Frontend
-- ⚛️ **React 19** - Framework SPA moderno
-- ⚡ **Vite** - Build tool ultrarrápido
-- 🎨 **CSS3** - Estilos responsive nativos
-- 🌐 **Axios** - Cliente HTTP para APIs
+### Obligatorios
 
-### Backend
-- 🟢 **Node.js 18+** - Runtime JavaScript
-- 🚀 **Express.js 5** - Framework web minimalista
-- 🔐 **JWT** - Autenticación de tokens
-- 📡 **Axios** - Cliente HTTP para APIs externas
+| Requisito | Versión | Para qué sirve |
+|-----------|---------|---------------|
+| **Node.js** | 18+ | Ejecutar backend y frontend |
+| **PostgreSQL** | 15+ | Guardar usuarios, playlists, favoritos |
+| **npm** | 9+ | Gestión de dependencias |
+| **Git** | — | Clonar el repositorio |
 
-### Base de Datos
-- 🐬 **MySQL 8.0+** - Base de datos relacional
-- 🔄 **mysql2** - Driver nativo de MySQL para Node.js
+### Opcionales
 
-### APIs Externas
-- 🎵 **Spotify Web API** - Búsqueda y metadata musical
-- 🎶 **MusicBrainz API** - Base de datos abierta de metadata
-- 🎼 **Free Music Archive (FMA)** - Música 100% legal (planeado)
+| Requisito | APIs que habilita |
+|-----------|------------------|
+| **Client ID + Secret de Spotify** | Búsqueda en Spotify (previews de 30 s) |
+| **API Key de YouTube Data API v3** | Búsqueda en YouTube y YouTube Music (audio completo) |
+| **API Key de Free Music Archive** | Búsqueda en FMA (canciones completas libres) |
+| **Docker** | Levantar PostgreSQL sin instalarlo manualmente |
 
-### Desarrollo
-- 📦 **npm** - Gestor de dependencias
-- 🔄 **nodemon** - Recarga automática en desarrollo
-- 📝 **ESLint** - Linting de código
+> Sin credenciales de alguna API, esa fuente simplemente no aparece en resultados. Deezer y MusicBrainz no necesitan autenticación.
 
 ---
 
-## 🚀 Guía de Instalación y Setup
+## Instalación
 
-### 📋 Prerrequisitos
-
-Antes de comenzar, asegúrate de tener instalado:
-
-- **Node.js 18+** - [Descargar](https://nodejs.org/)
-- **MySQL 8.0+** - [Descargar](https://dev.mysql.com/downloads/mysql/)
-- **Git** - [Descargar](https://git-scm.com/)
-- **Cuenta de Spotify Developer** - [Crear](https://developer.spotify.com/dashboard)
-
-### 🔧 Paso 1: Clonar el Repositorio
+### 1. Clonar el proyecto
 
 ```bash
 git clone <url-del-repositorio>
 cd Reproductor
 ```
 
-### 🔧 Paso 2: Instalar Dependencias
+### 2. Configurar variables de entorno
 
-#### Backend
 ```bash
-cd BackEnd
-npm install
-```
-
-#### Frontend
-```bash
-cd ../FrontEnd/mi-app
-npm install
-```
-
-#### Volver a la raíz
-```bash
-cd ../..
-```
-
-### 🔧 Paso 3: Configurar Variables de Entorno
-
-#### 3.1 Crear archivo .env
-```bash
-# Copia el archivo de ejemplo
 cp .env.example .env
 ```
 
-#### 3.2 Configurar credenciales de Spotify
-
-1. Ve a [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-2. Crea una nueva aplicación
-3. Ve a **Settings > Basic Information**
-4. Copia el **Client ID** y **Client Secret**
-
-#### 3.3 Editar .env
-
-Abre `.env` y configura:
+Edita `.env` con tus datos. Lo mínimo indispensable:
 
 ```env
-# Credenciales de Spotify (OBLIGATORIAS)
-SPOTIFY_CLIENT_ID=tu_client_id_aqui
-SPOTIFY_CLIENT_SECRET=tu_client_secret_aqui
-
-# Puerto del servidor (opcional, default: 4000)
-PORT=4000
-
-# Base de datos MySQL (OBLIGATORIAS)
 DB_HOST=localhost
 DB_USER=reproductor_user
-DB_PASSWORD=tu_password_mysql_segura
+DB_PASSWORD=tu_contraseña_segura
 DB_NAME=reproductor_db
-DB_POOL_LIMIT=10
-
-# JWT Secret (cambia esto en producción)
-JWT_SECRET=genera_uno_con_openssl_rand_-base64_32
+JWT_SECRET=openssl rand -base64 32
 ```
 
-### 🔧 Paso 4: Configurar Base de Datos MySQL
+### 3. Inicializar base de datos
 
-**⚠️ IMPORTANTE: La BD es OBLIGATORIA para que funcione la autenticación**
-
-#### Opción A: Setup Automático (RECOMENDADO)
+#### Opción A — Docker (recomendada)
 
 ```bash
-# Hacer el script ejecutable
-chmod +x setup-database.sh
-
-# Ejecutar el setup
-bash setup-database.sh
-# Te pedirá:
-# - Usuario root de MySQL
-# - Contraseña root
-# - Contraseña para reproductor_user
-# Y configurará todo automáticamente
+docker compose -f docker/docker-compose.dev.yml up -d postgres
 ```
 
-#### Opción B: Setup Manual
-
-**Requisito previo: MySQL debe estar instalado y corriendo**
+#### Opción B — PostgreSQL local
 
 ```bash
-# Linux
-sudo apt-get install mysql-server
-sudo systemctl start mysql
-
-# Mac
-brew install mysql
-brew services start mysql
-
-# Windows
-# Descargar desde: https://dev.mysql.com/downloads/mysql/
+sudo -u postgres psql
+CREATE DATABASE reproductor_db;
+CREATE USER reproductor_user WITH PASSWORD 'tu_contraseña_segura';
+GRANT ALL PRIVILEGES ON DATABASE reproductor_db TO reproductor_user;
+\q
 ```
 
-**Crear BD y usuario:**
+Luego crear las tablas:
 
 ```bash
-# Conectar a MySQL
-mysql -u root -p
-
-# Dentro de MySQL, ejecutar:
-CREATE DATABASE reproductor_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'reproductor_user'@'localhost' IDENTIFIED BY 'tu_password_aqui';
-GRANT ALL PRIVILEGES ON reproductor_db.* TO 'reproductor_user'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
+psql -U reproductor_user -d reproductor_db -h localhost < BackEnd/src/db/DataBases.sql
 ```
 
-**Importar schema:**
+### 4. Instalar dependencias
 
 ```bash
-mysql -u reproductor_user -p reproductor_db < BackEnd/src/db/DataBases.sql
-# Ingresa tu password cuando te lo pida
+# Backend
+cd BackEnd && npm install && cd ..
+
+# Frontend
+cd FrontEnd/mi-app && npm install && cd ../..
 ```
 
-#### Opción C: Docker
+### 5. Iniciar la aplicación
 
-```bash
-# Ejecutar MySQL en container
-docker run --name reproductor-mysql \
-  -e MYSQL_ROOT_PASSWORD=root \
-  -e MYSQL_DATABASE=reproductor_db \
-  -p 3306:3306 \
-  -d mysql:8.0
+**Terminal 1 — Backend (http://localhost:4000)**
 
-# Luego sigue con "Importar schema" (Opción B)
-```
-
-**Verificar conexión:**
-
-```bash
-# En BackEnd/
-npm run db:verify
-# Deberías ver: ✅ TODAS LAS VERIFICACIONES PASARON
-```
-
-### 🔧 Paso 5: Ejecutar la Aplicación
-
-#### Opción A: Ejecutar por separado (Recomendado para desarrollo)
-
-**Terminal 1 - Backend:**
 ```bash
 cd BackEnd
 npm run dev
-# Servidor corriendo en http://localhost:4000
 ```
 
-**Terminal 2 - Frontend:**
+**Terminal 2 — Frontend (http://localhost:5173)**
+
 ```bash
 cd FrontEnd/mi-app
 npm run dev
-# Aplicación corriendo en http://localhost:5173
 ```
 
-#### Opción B: Script unificado (Próximamente)
+### 6. Verificar
+
 ```bash
-# TODO: Crear script para ejecutar ambos simultáneamente
-npm run start
+curl http://localhost:4000/api/health
+# {"status":"ok","service":"backend"}
+
+curl http://localhost:4000/api/search?q=queen
 ```
-
-### 🔧 Paso 6: Verificar Instalación
-
-1. **Backend:** Visita `http://localhost:4000/api/search?q=queen`
-2. **Frontend:** Visita `http://localhost:5173`
-3. **Buscar música:** Prueba buscar "Queen" o cualquier artista
 
 ---
 
-## 📁 Estructura del Proyecto
+## Despliegue con Docker (producción)
+
+```bash
+# 1. Configurar variables
+cp docker/.env.example .env
+
+# 2. Construir y levantar todo
+docker compose -f docker/docker-compose.yml up -d --build
+
+# 3. Ver logs
+docker compose -f docker/docker-compose.yml logs -f
+
+# 4. Detener
+docker compose -f docker/docker-compose.yml down
+```
+
+---
+
+## APIs de búsqueda
+
+| API | Autenticación | Límite | Contenido |
+|-----|--------------|--------|-----------|
+| **Spotify** | Client ID + Secret | 1000 req/hora | Previews 30 s |
+| **Deezer** | No requiere | ~50 req/5 s | Previews 30 s |
+| **YouTube** | API Key | 10,000 cuotas/día | Audio vía IFrame API |
+| **YouTube Music** | API Key (misma YouTube) | 10,000 cuotas/día | Audio vía IFrame API |
+| **MusicBrainz** | No requiere | 1 req/s | Metadata |
+| **Free Music Archive** | API Key | Variable | Canciones completas |
+
+Cada API es un plugin independiente. Si no configuras sus credenciales, no aparece en resultados.
+
+---
+
+## Estructura del proyecto
 
 ```
 Reproductor/
-├── 📁 BackEnd/                    # API REST
-│   ├── 📁 src/
-│   │   ├── app.js                # Servidor principal
-│   │   ├── 📁 config/            # Configuraciones
-│   │   ├── 📁 controllers/       # Controladores de rutas
-│   │   ├── 📁 db/               # Scripts de BD
-│   │   ├── 📁 routes/           # Definición de rutas
-│   │   ├── 📁 services/         # Lógica de negocio
-│   │   └── 📁 utils/            # Utilidades
+├── BackEnd/
+│   ├── src/
+│   │   ├── app.js                    # Servidor Express
+│   │   ├── controllers/              # Lógica de rutas
+│   │   ├── db/                       # Conexión PostgreSQL + schema
+│   │   ├── middleware/               # Auth, rate limiting
+│   │   ├── routes/                   # Definición de rutas
+│   │   ├── services/                 # APIs externas (Spotify, Deezer, etc.)
+│   │   ├── utils/                    # Logger, validación, merge
+│   │   └── __tests__/
 │   └── package.json
-├── 📁 FrontEnd/                  # Aplicación React
-│   └── 📁 mi-app/
-│       ├── 📁 src/
-│       │   ├── App.jsx          # Componente principal
-│       │   ├── main.jsx         # Punto de entrada
-│       │   └── 📁 assets/       # Recursos estáticos
+├── FrontEnd/
+│   └── mi-app/
+│       ├── src/
+│       │   ├── components/           # Topbar, Sidebar, Player, PlaylistPanel...
+│       │   ├── pages/                # Dashboard, Favorites, Playlists, Profile, Auth
+│       │   ├── context/              # AuthContext, PlayerContext
+│       │   ├── services/             # api.js (axios), navigate.js
+│       │   └── __tests__/
 │       ├── index.html
 │       └── package.json
-├── 📁 docks/                     # Documentación
-├── .env.example                  # Variables de entorno (ejemplo)
-├── .gitignore                    # Archivos ignorados por Git
-└── README.MD                     # Esta documentación
+├── python-services/                  # Microservicio FastAPI (recomendaciones)
+├── docker/
+│   ├── docker-compose.yml            # Producción
+│   ├── docker-compose.dev.yml        # Desarrollo con hot-reload
+│   ├── Dockerfile.backend
+│   ├── Dockerfile.frontend
+│   └── Dockerfile.python
+├── docks/                            # Documentación de cambios
+├── .env.example
+└── README.MD
 ```
 
 ---
 
-## 🔌 APIs Utilizadas
+## Pruebas
 
-### 🎵 Spotify Web API
-- **Uso:** Búsqueda de canciones, artistas y álbumes
-- **Autenticación:** Client Credentials Flow
-- **Límite:** 1000 requests/hora por defecto
-- **Documentación:** [Spotify Web API](https://developer.spotify.com/documentation/web-api/)
-
-### 🎶 MusicBrainz API
-- **Uso:** Metadata musical adicional
-- **Autenticación:** No requerida
-- **Límite:** 1 request/segundo
-- **Documentación:** [MusicBrainz API](https://musicbrainz.org/doc/MusicBrainz_API)
-
-### 🎼 Free Music Archive (Planeado)
-- **Uso:** Reproducción completa de música libre
-- **Licencia:** Creative Commons
-- **Estado:** Pendiente de implementación
-
----
-
-## 🧪 Testing y Desarrollo
-
-### Ejecutar Tests
 ```bash
 # Backend
-cd BackEnd
-npm test
+cd BackEnd && npm test
 
 # Frontend
-cd ../FrontEnd/mi-app
-npm test
-```
-
-### Desarrollo con Hot Reload
-```bash
-# Backend (con nodemon)
-cd BackEnd
-npm run dev
-
-# Frontend (con Vite)
-cd FrontEnd/mi-app
-npm run dev
-```
-
-### Linting
-```bash
-# Backend
-cd BackEnd
-npm run lint
-
-# Frontend
-cd FrontEnd/mi-app
-npm run lint
+cd FrontEnd/mi-app && npx vitest run
 ```
 
 ---
 
-## 🚀 Deployment
+## Comandos útiles
 
-### Variables de Producción
-Para producción, configura estas variables adicionales:
+### Backend (`BackEnd/`)
 
-```env
-NODE_ENV=production
-JWT_SECRET=clave_muy_segura_para_produccion
-DB_HOST=tu_servidor_mysql_produccion
-```
+| Comando | Qué hace |
+|---------|----------|
+| `npm run dev` | Servidor con recarga automática |
+| `npm test` | Ejecuta pruebas |
+| `npm run lint` | ESLint |
 
-### Build para Producción
-```bash
-# Frontend
-cd FrontEnd/mi-app
-npm run build
+### Frontend (`FrontEnd/mi-app/`)
 
-# Backend (si es necesario)
-cd ../../BackEnd
-npm run build
-```
+| Comando | Qué hace |
+|---------|----------|
+| `npm run dev` | Servidor de desarrollo Vite |
+| `npm run build` | Build para producción |
+| `npx vitest run` | Pruebas del frontend |
 
 ---
 
-## 🤝 Contribuir
+## Consideraciones legales
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+- **Spotify**: solo previews de 30 segundos
+- **Deezer**: solo previews de 30 segundos
+- **YouTube**: reproducción vía embed oficial de YouTube
+- **FMA**: música Creative Commons (cuando está configurado)
+- **MusicBrainz**: solo metadata pública
 
----
-
-## 📝 Licencia
-
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
+No se descarga, almacena ni distribuye música protegida por derechos de autor.
 
 ---
 
-## 📞 Soporte
+## Licencia
 
-Si tienes problemas:
-
-1. Revisa la [documentación de troubleshooting](docks/)
-2. Verifica que todas las variables de entorno estén configuradas
-3. Asegúrate de que MySQL esté corriendo
-4. Revisa los logs del backend para errores específicos
-
----
-
-## 🎯 Roadmap
-
-- [ ] ✅ Búsqueda básica funcional
-- [ ] 🔄 Autenticación de usuarios
-- [ ] 📱 Interfaz móvil responsive
-- [ ] 🎵 Reproducción completa con FMA
-- [ ] 📋 Sistema de playlists
-- [ ] 🔍 Búsqueda avanzada con filtros
-- [ ] 🌐 Internacionalización (i18n)
-- [ ] 📊 Dashboard de estadísticas
-- [ ] 🔧 Configuración Docker
-- [ ] 🚀 CI/CD Pipeline
-
----
-
-**⭐ Si te gusta este proyecto, dale una estrella en GitHub!**
-🧱 Arquitectura del proyecto
-Frontend (React)
-   ↓
-Backend (Node.js API)
-   ↓
-----------------------------------
-| Spotify API                    |
-| Free Music Archive API        |
-| MusicBrainz API               |
-----------------------------------
-   ↓
-Base de Datos (MySQL)
-🚀 Funcionalidades principales
-🔍 Búsqueda de canciones y artistas
-🎧 Reproducción de previews (Spotify)
-🎵 Reproducción completa (música libre - FMA)
-📀 Visualización de álbumes
-👤 Autenticación de usuarios
-📂 Gestión de playlists
-📊 Recomendaciones musicales
-❤️ Favoritos (opcional)
-⚠️ Limitaciones legales
-
-Este proyecto respeta las políticas de uso de cada API:
-
-❌ No se descargan canciones protegidas
-❌ No se distribuye música con copyright
-❌ No se accede a contenido privado sin autorización
-
-✔ Solo se usan:
-
-Previews de Spotify (30 segundos)
-Música libre y abierta (FMA)
-Metadata pública (MusicBrainz)
-🎓 Enfoque educativo
-
-Este proyecto está diseñado para:
-
-Estudiantes de desarrollo de software
-Desarrolladores junior/intermedios
-Personas interesadas en arquitectura fullstack
-💡 Inspiración
-
-Se espera que este proyecto:
-
-Inspire a otros a construir aplicaciones reales
-Promueva el uso de APIs de forma ética
-Fomente el aprendizaje práctico
-🛠️ Instalación (próximamente)
-
-Se documentará paso a paso:
-
-Configuración del entorno
-Variables de entorno
-Ejecución del frontend y backend
-Integración de APIs
-📌 Estado del proyecto
-
-🚧 En desarrollo
-
-🤝 Contribuciones
-
-Las contribuciones son bienvenidas:
-
-Mejoras de UI/UX
-Nuevas funcionalidades
-Optimización de código
-📜 Licencia
-
-Este proyecto es de uso educativo.
-Verifica las licencias de cada API antes de usar en producción.
-
-✨ Autor
-
-Desarrollado como proyecto educativo para demostrar habilidades en desarrollo fullstack moderno.
-
-🚀 Próximos pasos
-Implementación del backend
-Integración de autenticación
-Construcción del reproductor
-UI estilo Spotify
-
-“Aprender haciendo es la mejor forma de crecer como desarrollador.”
+MIT — ver [LICENSE](LICENSE) para más detalles.

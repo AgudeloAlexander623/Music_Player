@@ -1,44 +1,40 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import './Sidebar.css';
 
+const menuItems = [
+  { to: '/', icon: '🎵', label: 'Dashboard' },
+  { to: '/favorites?tab=albums', icon: '💿', label: 'Favorite Albums' },
+  { to: '/favorites?tab=tracks', icon: '🎶', label: 'Favorite Tracks' },
+  { to: '/favorites?tab=artists', icon: '👤', label: 'Favorite Artists' },
+  { to: '/playlists', icon: '📋', label: 'Playlists' },
+  { to: '/profile', icon: '⚙️', label: 'Preferences' },
+];
+
 export default function Sidebar() {
-  const { user, isGuest } = useAuth();
   const location = useLocation();
 
-  const menuItems = [
-    { to: '/', icon: '🎵', label: 'Inicio' },
-    { to: '/favorites', icon: '⭐', label: 'Favoritos' },
-    { to: '/playlists', icon: '📋', label: 'Playlists' },
-    { to: '/profile', icon: '👤', label: 'Perfil' },
-  ];
+  const isActive = (to) => {
+    const path = to.split('?')[0];
+    return location.pathname === path;
+  };
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-header">
-        <Link to="/" className="sidebar-logo">
-          <span className="logo-icon">🎵</span>
-        </Link>
-      </div>
-
-      <nav className="sidebar-menu">
-        {menuItems.map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            className={`sidebar-menu-item ${location.pathname === item.to ? 'active' : ''}`}
-          >
-            <span className="menu-icon">{item.icon}</span>
-            <span className="menu-label">{item.label}</span>
-          </Link>
-        ))}
+      <nav>
+        <ul>
+          {menuItems.map((item) => (
+            <li key={item.to}>
+              <Link
+                to={item.to}
+                className={`sidebar-link ${isActive(item.to) ? 'active' : ''}`}
+              >
+                <span className="sidebar-icon">{item.icon}</span>
+                <span className="sidebar-label">{item.label}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </nav>
-
-      <div className="sidebar-footer">
-        <Link to="/profile" className="sidebar-profile" title={user?.email || 'Invitado'}>
-          {isGuest ? '👤' : user?.email?.charAt(0).toUpperCase()}
-        </Link>
-      </div>
     </aside>
   );
 }

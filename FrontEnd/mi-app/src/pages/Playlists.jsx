@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { usePlayer } from '../App';
 import { useToast } from '../components/Toast';
 import api from '../services/api';
-import Player from '../components/Player';
 import './Playlists.css';
 
 export default function Playlists() {
@@ -12,11 +12,10 @@ export default function Playlists() {
   const [creating, setCreating] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [tracks, setTracks] = useState([]);
-  const [currentTrack, setCurrentTrack] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
-  const [queue, setQueue] = useState([]);
+  const { playTrack } = usePlayer();
   const toast = useToast();
 
   const loadPlaylists = useCallback(async () => {
@@ -120,26 +119,7 @@ export default function Playlists() {
       previewUrl: t.preview_url,
       source: t.source,
     }));
-    setQueue(trackQueue);
-    setCurrentTrack(trackData);
-  };
-
-  const handlePlayNext = (index) => {
-    if (index !== undefined && queue[index]) {
-      setCurrentTrack(queue[index]);
-      return;
-    }
-    const idx = queue.findIndex((t) => t.id === currentTrack?.id && t.source === currentTrack?.source);
-    if (idx >= 0 && idx < queue.length - 1) {
-      setCurrentTrack(queue[idx + 1]);
-    }
-  };
-
-  const handlePlayPrevious = () => {
-    const idx = queue.findIndex((t) => t.id === currentTrack?.id && t.source === currentTrack?.source);
-    if (idx > 0) {
-      setCurrentTrack(queue[idx - 1]);
-    }
+    playTrack(trackData, trackQueue);
   };
 
   const handleRemoveTrack = async (playlistId, trackId) => {
@@ -153,10 +133,8 @@ export default function Playlists() {
   };
 
   return (
-    <div className="playlists-container">
-      <div className="playlists-header">
-        <h1>Playlists</h1>
-      </div>
+    <>
+      <h1>Playlists</h1>
 
       <form onSubmit={handleCreate} className="create-form">
         <input
@@ -179,10 +157,10 @@ export default function Playlists() {
         </button>
       </form>
 
-      {loading && <p>Cargando playlists...</p>}
+      {loading && <p className="loading-text">Cargando playlists...</p>}
 
       {!loading && playlists.length === 0 && (
-        <p className="playlists-empty">
+        <p className="empty-text">
           No tienes playlists aún. Crea una usando el formulario de arriba.
         </p>
       )}
@@ -221,10 +199,7 @@ export default function Playlists() {
                 {pl.description && <div className="playlist-desc">{pl.description}</div>}
               </div>
               <div className="playlist-actions">
-                <button
-                  className="playlist-action-btn"
-                  onClick={() => loadTracks(pl.id)}
-                >
+                <button className="playlist-action-btn" onClick={() => loadTracks(pl.id)}>
                   {expandedId === pl.id ? 'Cerrar' : 'Ver tracks'}
                 </button>
                 <button className="playlist-action-btn edit" onClick={() => startEdit(pl)}>
@@ -245,13 +220,13 @@ export default function Playlists() {
                   <div className="track-row-info">
                     <strong>{t.track_title}</strong>
                     <span className="track-row-artist"> — {t.artist}</span>
-                    <span className={`track-row-source source-${t.source}`}>{t.source}</span>
+                    <span className="track-row-source">{t.source}</span>
                   </div>
                   <div className="track-row-actions">
                     {t.preview_url && (
-                      <button className="track-btn" onClick={() => handlePlay(t)}>▶️</button>
+                      <button className="track-row-btn" onClick={() => handlePlay(t)}>▶️</button>
                     )}
-                    <button className="remove-track-btn" onClick={() => handleRemoveTrack(pl.id, t.id)}>
+                    <button className="track-row-btn remove" onClick={() => handleRemoveTrack(pl.id, t.id)}>
                       ✕
                     </button>
                   </div>
@@ -261,16 +236,6 @@ export default function Playlists() {
           )}
         </div>
       ))}
-
-      {currentTrack && (
-        <Player
-          track={currentTrack}
-          queue={queue}
-          onPlayNext={handlePlayNext}
-          onPlayPrevious={handlePlayPrevious}
-          onClose={() => setCurrentTrack(null)}
-        />
-      )}
-    </div>
+    </>
   );
 }

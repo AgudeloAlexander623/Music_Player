@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
+import { usePlayer } from '../App';
 import { useToast } from '../components/Toast';
 import api from '../services/api';
-import Player from '../components/Player';
 import './Favorites.css';
 
 export default function Favorites() {
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentTrack, setCurrentTrack] = useState(null);
-  const [queue, setQueue] = useState([]);
+  const [tab, setTab] = useState('tracks');
+  const { playTrack } = usePlayer();
   const toast = useToast();
 
   const loadFavorites = useCallback(async () => {
@@ -47,40 +47,36 @@ export default function Favorites() {
   });
 
   const handlePlay = (fav) => {
-    setQueue(favorites.map(mapFavoriteToTrack));
-    setCurrentTrack(mapFavoriteToTrack(fav));
+    const queue = favorites.map(mapFavoriteToTrack);
+    playTrack(mapFavoriteToTrack(fav), queue);
   };
 
-  const handlePlayNext = (index) => {
-    if (index !== undefined && queue[index]) {
-      setCurrentTrack(queue[index]);
-      return;
-    }
-    if (!currentTrack) return;
-    const idx = queue.findIndex((t) => t.id === currentTrack.id && t.source === currentTrack.source);
-    if (idx >= 0 && idx < queue.length - 1) {
-      setCurrentTrack(queue[idx + 1]);
-    }
-  };
-
-  const handlePlayPrevious = () => {
-    if (!currentTrack) return;
-    const idx = queue.findIndex((t) => t.id === currentTrack.id && t.source === currentTrack.source);
-    if (idx > 0) {
-      setCurrentTrack(queue[idx - 1]);
-    }
-  };
+  const tabs = [
+    { key: 'tracks', label: 'Tracks' },
+    { key: 'albums', label: 'Albums' },
+    { key: 'artists', label: 'Artists' },
+  ];
 
   return (
-    <div className="favorites-container">
-      <div className="favorites-header">
-        <h1>⭐ Favoritos</h1>
+    <>
+      <h1>⭐ Favorites</h1>
+
+      <div className="tab-bar">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            className={`tab-btn ${tab === t.key ? 'active' : ''}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {loading && <p>Cargando favoritos...</p>}
+      {loading && <p className="loading-text">Cargando favoritos...</p>}
 
       {!loading && favorites.length === 0 && (
-        <p className="favorites-empty">
+        <p className="empty-text">
           No tienes favoritos aún. Busca canciones y agrégalas desde la pantalla principal.
         </p>
       )}
@@ -88,6 +84,9 @@ export default function Favorites() {
       <div className="favorites-list">
         {favorites.map((fav) => (
           <div key={fav.id} className="favorite-item">
+            {fav.album_image && (
+              <img src={fav.album_image} alt="" className="fav-image" />
+            )}
             <div className="favorite-info">
               <div className="favorite-title">{fav.track_title}</div>
               <div className="favorite-artist">{fav.artist}</div>
@@ -97,26 +96,13 @@ export default function Favorites() {
             </div>
             <div className="favorite-actions">
               {fav.preview_url && (
-                <button className="track-btn" onClick={() => handlePlay(fav)}>▶️</button>
+                <button className="action-btn" onClick={() => handlePlay(fav)}>▶️</button>
               )}
-              <button className="track-btn" onClick={() => handleRemoveFavorite(fav.id)}>🗑️</button>
+              <button className="action-btn" onClick={() => handleRemoveFavorite(fav.id)}>🗑️</button>
             </div>
           </div>
         ))}
       </div>
-
-      {currentTrack && (
-        <Player
-          track={currentTrack}
-          queue={queue}
-          onPlayNext={handlePlayNext}
-          onPlayPrevious={handlePlayPrevious}
-          onClose={() => {
-            setCurrentTrack(null);
-            setQueue([]);
-          }}
-        />
-      )}
-    </div>
+    </>
   );
 }

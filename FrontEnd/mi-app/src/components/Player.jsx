@@ -59,7 +59,6 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
   const ytProgressRef = useRef(null);
   const ytDurationRef = useRef(0);
 
-  /* ─── Cargar API de YouTube ─── */
   useEffect(() => {
     if (!isYouTube) return;
 
@@ -86,7 +85,6 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
     };
   }, [isYouTube]);
 
-  /* ─── Crear/destruir YouTube player ─── */
   useEffect(() => {
     if (!isYouTube || !track?.videoId || !ytApiReady) return;
 
@@ -174,7 +172,6 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
     };
   }, [isYouTube, track?.videoId, ytApiReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ─── Audio element para fuentes no-YouTube ─── */
   useEffect(() => {
     if (isYouTube) return;
 
@@ -255,7 +252,6 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
     };
   }, [isYouTube, track, repeatMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ─── Play / Pause ─── */
   const togglePlay = useCallback(() => {
     if (isYouTube) {
       if (!ytPlayerRef.current || !ytReady) return;
@@ -287,7 +283,6 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
     }
   }, [isPlaying, track, isYouTube, ytReady]);
 
-  /* ─── Seek ─── */
   const handleSeek = useCallback((e) => {
     if (!duration) return;
     const rect = progressRef.current.getBoundingClientRect();
@@ -302,7 +297,6 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
     setCurrentTime(seekTime);
   }, [duration, isYouTube]);
 
-  /* ─── Volumen ─── */
   const handleVolumeChange = useCallback((e) => {
     const value = parseFloat(e.target.value);
     setVolume(value);
@@ -316,30 +310,6 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
     setIsMuted(value === 0);
   }, [isYouTube]);
 
-  const toggleMute = useCallback(() => {
-    if (isMuted) {
-      const restore = prevVolumeRef.current;
-      setVolume(restore);
-      setIsMuted(false);
-      if (isYouTube && ytPlayerRef.current) {
-        ytPlayerRef.current.unMute();
-        ytPlayerRef.current.setVolume(Math.round(restore * 100));
-      } else if (audioRef.current) {
-        audioRef.current.volume = restore;
-      }
-    } else {
-      prevVolumeRef.current = volume;
-      setVolume(0);
-      setIsMuted(true);
-      if (isYouTube && ytPlayerRef.current) {
-        ytPlayerRef.current.mute();
-      } else if (audioRef.current) {
-        audioRef.current.volume = 0;
-      }
-    }
-  }, [isMuted, volume, isYouTube]);
-
-  /* ─── Navegación ─── */
   const handleNext = useCallback(() => {
     if (!queue.length) return;
     if (shuffleMode) {
@@ -355,16 +325,6 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
     if (hasPrev && onPlayPrevious) onPlayPrevious();
   }, [hasPrev, onPlayPrevious]);
 
-  /* ─── Modos ─── */
-  const toggleRepeat = useCallback(() => {
-    setRepeatMode(prev => prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off');
-  }, []);
-
-  const toggleShuffle = useCallback(() => {
-    setShuffleMode(prev => !prev);
-  }, []);
-
-  /* ─── Teclado ─── */
   const handleKeyDown = useCallback((e) => {
     if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
       e.preventDefault();
@@ -390,69 +350,69 @@ export default function Player({ track, queue = [], onPlayNext, onPlayPrevious, 
   if (!track) return null;
 
   return (
-    <div className="player-bar">
+    <footer className="player">
       {isYouTube && (
         <div ref={ytContainerRef} className="player-youtube-container" />
       )}
 
-      <div className="player-track-info">
-        {(track.thumbnail || track.albumImage) && <img src={track.thumbnail || track.albumImage} alt="" className="player-image" />}
-        <div className="player-text">
-          <div className="player-name">{track.title || track.name}</div>
-          <div className="player-artist">{track.artist}</div>
-          <div className="player-source-tag">{track.source === 'youtube_music' ? 'YouTube Music' : track.source}</div>
-          {audioError && <div className="player-error">{audioError}</div>}
+      <div className="track-info">
+        {(track.thumbnail || track.albumImage) && (
+          <img src={track.thumbnail || track.albumImage} alt="" className="track-cover" />
+        )}
+        <div className="track-text">
+          <h4>{track.title || track.name}</h4>
+          <span>{track.artist}</span>
         </div>
+        {audioError && <span className="player-error">{audioError}</span>}
       </div>
 
       <div className="player-center">
-        <div className="player-main-controls">
-          <button className="player-control-btn" onClick={handlePrevious} disabled={!hasPrev} title="Anterior">⏮</button>
+        <div className="player-controls">
+          <button onClick={handlePrevious} disabled={!hasPrev} title="Anterior">⏮</button>
           <button
-            className="player-play-btn"
+            className="play-btn-main"
             onClick={togglePlay}
             disabled={!canPlay}
             title={canPlay ? (isPlaying ? 'Pausar' : 'Reproducir') : 'Cargando...'}
           >
             {isPlaying ? '⏸' : '▶'}
           </button>
-          <button className="player-control-btn" onClick={handleNext} disabled={!hasNext} title="Siguiente">⏭</button>
+          <button onClick={handleNext} disabled={!hasNext} title="Siguiente">⏭</button>
         </div>
 
-        <div className="player-progress" ref={progressRef} onClick={handleSeek}>
-          <span className="player-time">{formatTime(currentTime)}</span>
-          <div className="player-progress-bar">
-            <div className="player-progress-fill" style={{ width: `${progressPercent}%` }} />
+        <div className="progress" ref={progressRef} onClick={handleSeek}>
+          <span className="progress-time">{formatTime(currentTime)}</span>
+          <div className="progress-bar">
+            <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
           </div>
-          <span className="player-time">{formatTime(duration)}</span>
+          <span className="progress-time">{formatTime(duration)}</span>
         </div>
       </div>
 
       <div className="player-right">
         <button
-          className={`player-mode-btn ${shuffleMode ? 'active' : ''}`}
-          onClick={toggleShuffle}
+          className={`mode-btn ${shuffleMode ? 'active' : ''}`}
+          onClick={() => setShuffleMode(prev => !prev)}
           title={shuffleMode ? 'Aleatorio activo' : 'Aleatorio'}
         >🔀</button>
         <button
-          className={`player-mode-btn ${repeatMode !== 'off' ? 'active' : ''}`}
-          onClick={toggleRepeat}
+          className={`mode-btn ${repeatMode !== 'off' ? 'active' : ''}`}
+          onClick={() => setRepeatMode(prev => prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off')}
           title={repeatMode === 'one' ? 'Repetir uno' : repeatMode === 'all' ? 'Repetir todo' : 'Repetir'}
         >{repeatMode === 'one' ? '🔂' : '🔁'}</button>
-        {!canPlay && !isYouTube && <span className="player-no-preview">Sin preview</span>}
-        <div className="player-volume">
-          <button className="player-volume-btn" onClick={toggleMute} title={isMuted ? 'Activar sonido' : 'Silenciar'}>
+        <div className="volume">
+          <span className="volume-icon">
             {isMuted || volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
-          </button>
+          </span>
           <input
             type="range" min="0" max="1" step="0.01"
             value={isMuted ? 0 : volume}
             onChange={handleVolumeChange}
-            className="player-volume-slider" title="Volumen"
+            className="volume-slider" title="Volumen"
           />
         </div>
-        <button className="player-close-btn" onClick={onClose} title="Cerrar">✕</button>
+        <button className="player-close" onClick={onClose} title="Cerrar">✕</button>
       </div>
-    </div>
+    </footer>
   );
 }

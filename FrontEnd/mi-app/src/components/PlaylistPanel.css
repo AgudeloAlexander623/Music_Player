@@ -1,0 +1,57 @@
+.playlist-panel {
+  width: 260px;
+  min-height: 100%;
+  background: rgba(20, 12, 24, 0.95);
+  border-left: 1px solid rgba(200, 100, 150, 0.2);
+  padding: 24px 16px;
+  flex-shrink: 0;
+}
+
+.playlist-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.play-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: white;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.play-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 20px rgba(194, 90, 125, 0.4);
+}
+
+.panel-cover {
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.playlist-preview h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e6edf3;
+  margin: 8px 0 0;
+}
+
+.playlist-preview p {
+  font-size: 0.85rem;
+  color: rgba(230, 237, 243, 0.5);
+  margin: 0;
+}

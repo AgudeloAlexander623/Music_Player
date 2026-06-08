@@ -1,104 +1,120 @@
-.favorites-container {
-  width: 100%;
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 40px 30px 150px;
-  background: var(--bg);
-  min-height: 100vh;
+.tab-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
 }
 
-.favorites-container .favorites-header h1 {
-  font-size: 2.5rem;
-  letter-spacing: -0.03em;
-  margin-bottom: 30px;
-  color: #e6edf3;
-  font-weight: 700;
+.tab-btn {
+  padding: 8px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
-.favorites-empty {
+.tab-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #091117;
+  border-color: transparent;
+}
+
+.loading-text,
+.empty-text {
   text-align: center;
-  color: rgba(230, 237, 243, 0.6);
-  margin-top: 60px;
-  font-size: 1.1rem;
+  color: var(--muted);
+  padding: 40px 0;
+  font-size: 0.95rem;
 }
 
 .favorites-list {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .favorite-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-radius: 12px;
-  background: rgba(194, 90, 125, 0.08);
-  border: 1px solid rgba(194, 90, 125, 0.2);
-  transition: all 0.2s ease;
-  cursor: pointer;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(194, 90, 125, 0.06);
+  border: 1px solid rgba(194, 90, 125, 0.15);
+  transition: all 0.15s;
 }
 
 .favorite-item:hover {
-  background: rgba(194, 90, 125, 0.12);
-  border-color: rgba(194, 90, 125, 0.3);
-  transform: translateX(4px);
+  background: rgba(194, 90, 125, 0.1);
+  border-color: rgba(194, 90, 125, 0.25);
+}
+
+.fav-image {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .favorite-info {
-  min-width: 0;
   flex: 1;
+  min-width: 0;
 }
 
 .favorite-title {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: #e6edf3;
 }
 
 .favorite-artist {
-  font-size: 0.9rem;
-  color: rgba(230, 237, 243, 0.6);
-  margin-top: 4px;
+  font-size: 0.8rem;
+  color: rgba(230, 237, 243, 0.5);
+  margin-top: 2px;
 }
 
 .favorite-source {
-  font-size: 0.75rem;
-  padding: 4px 10px;
+  font-size: 0.65rem;
+  padding: 2px 8px;
   border-radius: 6px;
-  background: linear-gradient(135deg, rgba(194, 90, 125, 0.2), rgba(194, 90, 125, 0.1));
-  color: rgba(230, 237, 243, 0.8);
+  background: rgba(194, 90, 125, 0.15);
+  color: rgba(230, 237, 243, 0.7);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-top: 6px;
+  margin-top: 4px;
   display: inline-block;
-  border: 1px solid rgba(194, 90, 125, 0.2);
 }
 
 .favorite-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
-  margin-left: 15px;
+  margin-left: 8px;
 }
 
-@media (max-width: 768px) {
-  .favorites-container {
-    padding: 25px 15px 150px;
-  }
+.action-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: transparent;
+  border: none;
+  color: #e6edf3;
+  cursor: pointer;
+  transition: background 0.15s;
+}
 
-  .favorites-container .favorites-header h1 {
-    font-size: 1.75rem;
-  }
-
-  .favorite-item {
-    flex-wrap: wrap;
-  }
-
-  .favorite-actions {
-    width: 100%;
-    margin-left: 0;
-    margin-top: 10px;
-    justify-content: flex-end;
-  }
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
 }

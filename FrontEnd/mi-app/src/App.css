@@ -1,29 +1,38 @@
-.main-content {
-  margin-left: 180px;
-  min-height: 100vh;
+.container {
+  display: flex;
+  min-height: calc(100vh - 64px);
+  margin-top: 64px;
+  padding-bottom: 80px;
 }
 
-@media (max-width: 768px) {
-  .main-content {
-    margin-left: 70px;
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 28px;
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+.content h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #e6edf3;
+  margin: 0 0 24px;
+  letter-spacing: -0.5px;
+}
+
+@media (max-width: 1024px) {
+  .container .playlist-panel {
+    display: none;
   }
 }
 
-.track-btn {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  font-size: 1rem;
-  transition: background 0.15s;
-}
+@media (max-width: 768px) {
+  .container .sidebar {
+    display: none;
+  }
 
-.track-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.track-btn-disabled {
-  opacity: 0.4;
+  .content {
+    padding: 16px;
+  }
 }

@@ -6,7 +6,7 @@ import './Profile.css';
 
 export default function Profile() {
   const { user, isGuest } = useAuth();
-  const [stats, setStats] = useState({ favorites: 0, playlists: 0, searches: null });
+  const [stats, setStats] = useState({ favorites: 0, playlists: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,7 +19,6 @@ export default function Profile() {
         setStats({
           favorites: (favRes.data.favorites || []).length,
           playlists: (plRes.data.playlists || []).length,
-          searches: null,
         });
       } catch (err) {
         console.error('Error al cargar estadísticas:', err);
@@ -36,7 +35,9 @@ export default function Profile() {
   const initial = isGuest ? '?' : (user?.email?.charAt(0).toUpperCase() || '?');
 
   return (
-    <div className="profile-container">
+    <>
+      <h1>Preferences</h1>
+
       <div className="profile-card">
         <div className="profile-avatar">{initial}</div>
         <div className="profile-email">
@@ -59,10 +60,6 @@ export default function Profile() {
             </div>
             <div className="profile-stat-label">Playlists</div>
           </div>
-          <div className="profile-stat">
-            <div className="profile-stat-value">{stats.searches !== null ? stats.searches : '—'}</div>
-            <div className="profile-stat-label">Búsquedas</div>
-          </div>
         </div>
       </div>
 
@@ -82,6 +79,6 @@ export default function Profile() {
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -1,41 +1,40 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../components/Toast';
+import { useState, useEffect } from 'react';
+import { usePlayer } from '../App';
 import ContentSection from '../components/ContentSection';
 import SearchResults from '../components/SearchResults';
-import Player from '../components/Player';
 import api from '../services/api';
+import { useToast } from '../components/Toast';
+import { useAuth } from '../context/AuthContext';
 import './Dashboard.css';
 
 export default function Dashboard() {
+  const { searchQuery, setSearchQuery, playTrack } = usePlayer();
   const [topPlaylists, setTopPlaylists] = useState([]);
   const [topArtists, setTopArtists] = useState([]);
   const [topAlbums, setTopAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState(null);
-  const [queue, setQueue] = useState([]);
   const [playlistFilter, setPlaylistFilter] = useState('');
   const [artistFilter, setArtistFilter] = useState('');
   const [albumFilter, setAlbumFilter] = useState('');
+  const [selectedGenre, setSelectedGenre] = useState('All');
   const toast = useToast();
   const { isGuest } = useAuth();
-  const navigate = useNavigate();
-  const searchInputRef = useRef(null);
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
   useEffect(() => {
-    if (!searched && searchInputRef.current) {
-      searchInputRef.current.focus();
+    if (searchQuery.length >= 2) {
+      handleSearch();
+    } else if (searchQuery.length === 0) {
+      setSearched(false);
+      setSearchResults([]);
     }
-  }, [searched]);
+  }, [searchQuery]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -90,20 +89,13 @@ export default function Dashboard() {
     }
   };
 
-  const handleSearch = async (e) => {
-    e?.preventDefault();
-    if (!searchQuery.trim() || searchQuery.trim().length < 2) {
-      toast.info('Escribe al menos 2 caracteres');
-      return;
-    }
+  const handleSearch = async () => {
+    if (!searchQuery.trim() || searchQuery.trim().length < 2) return;
     setSearching(true);
     setSearched(true);
     try {
       const res = await api.get(`/search?q=${encodeURIComponent(searchQuery.trim())}&limit=20`);
       setSearchResults(res.data.tracks || []);
-      if (!res.data.tracks?.length) {
-        toast.info('Sin resultados');
-      }
     } catch {
       toast.error('Error en la búsqueda');
     } finally {
@@ -112,8 +104,7 @@ export default function Dashboard() {
   };
 
   const handlePlaySearchResult = (track) => {
-    setQueue(searchResults);
-    setCurrentTrack(track);
+    playTrack(track, searchResults);
   };
 
   const handlePlayItem = (item, type) => {
@@ -126,26 +117,7 @@ export default function Dashboard() {
       previewUrl: item.previewUrl ?? null,
       source: 'internal',
     };
-    setCurrentTrack(newTrack);
-    setQueue([newTrack]);
-  };
-
-  const handlePlayNext = (index) => {
-    if (index !== undefined && queue[index]) {
-      setCurrentTrack(queue[index]);
-      return;
-    }
-    const idx = queue.findIndex((t) => t.id === currentTrack?.id);
-    if (idx >= 0 && idx < queue.length - 1) {
-      setCurrentTrack(queue[idx + 1]);
-    }
-  };
-
-  const handlePlayPrevious = () => {
-    const idx = queue.findIndex((t) => t.id === currentTrack?.id);
-    if (idx > 0) {
-      setCurrentTrack(queue[idx - 1]);
-    }
+    playTrack(newTrack, [newTrack]);
   };
 
   const handleAddFavorite = async (track) => {
@@ -188,29 +160,14 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="dashboard">
-      <div className="dashboard-header">
-        <h1>Inicio</h1>
-        <form className="dashboard-search" onSubmit={handleSearch}>
-          <input
-            ref={searchInputRef}
-            type="text"
-            className="dashboard-search-input"
-            placeholder="Busca canciones, artistas o álbumes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <button type="submit" className="dashboard-search-btn" disabled={searching} aria-label="Buscar">
-            {searching ? 'Buscando...' : '🔍'}
-          </button>
-        </form>
-      </div>
+    <>
+      <h1>Dashboard</h1>
 
       {searched && (
         <div className="dashboard-search-results">
           <div className="search-results-header">
-            <h2>Resultados para "{searchQuery}"</h2>
-            <button className="search-back-btn" onClick={() => setSearched(false)}>
+            <h2>Results for "{searchQuery}"</h2>
+            <button className="back-btn" onClick={() => { setSearched(false); setSearchQuery(''); }}>
               Volver
             </button>
           </div>
@@ -223,9 +180,23 @@ export default function Dashboard() {
       )}
 
       {!searched && (
-        <div className="dashboard-content">
+        <>
+          <div className="playlist-header">
+            <h2>Top Playlists</h2>
+            <div className="filters">
+              <button className="scroll-btn" onClick={() => document.querySelector('.items-container')?.scrollBy({ left: -400, behavior: 'smooth' })}>◀</button>
+              <select value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value)}>
+                <option value="All">All</option>
+                <option value="Rock">Rock</option>
+                <option value="Pop">Pop</option>
+                <option value="Electronic">Electronic</option>
+              </select>
+              <button className="scroll-btn" onClick={() => document.querySelector('.items-container')?.scrollBy({ left: 400, behavior: 'smooth' })}>▶</button>
+            </div>
+          </div>
+
           <ContentSection
-            title="Mis Playlists"
+            title="Top Playlists"
             items={filteredPlaylists}
             badge="Descubrir"
             onFilter={setPlaylistFilter}
@@ -250,18 +221,8 @@ export default function Dashboard() {
             filterValue={albumFilter}
             onPlay={(item) => handlePlayItem(item, 'album')}
           />
-        </div>
+        </>
       )}
-
-      {currentTrack && (
-        <Player
-          track={currentTrack}
-          queue={queue}
-          onPlayNext={handlePlayNext}
-          onPlayPrevious={handlePlayPrevious}
-          onClose={() => setCurrentTrack(null)}
-        />
-      )}
-    </main>
+    </>
   );
 }
