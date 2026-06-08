@@ -1,3 +1,14 @@
+"""In-memory music catalog and similarity data for the recommendation engine.
+
+This module is the single source of truth for all tracks the system knows
+about.  It also defines artist similarity mappings (who sounds like whom)
+and genre clusters (which genres are related) so the recommendation engine
+can make reasonable suggestions even when there's no direct match.
+
+The catalog is deliberately small — ~60 tracks across 9 genres — enough to
+demonstrate the recommendation logic without needing an external database.
+"""
+
 CATALOG = [
     # ── Rock ──
     {"id": "cat_001", "name": "Bohemian Rhapsody", "artist": "Queen", "album": "A Night at the Opera", "genre": "rock"},

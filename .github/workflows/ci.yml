@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: BackEnd Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: BackEnd/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: BackEnd
+
+      - name: Run tests
+        run: npm test
+        working-directory: BackEnd
+
+  frontend:
+    name: FrontEnd Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: FrontEnd/mi-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: FrontEnd/mi-app
+
+      - name: Run tests
+        run: npm test
+        working-directory: FrontEnd/mi-app
+
+  python:
+    name: Python Services Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: python-services/requirements*.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+        working-directory: python-services
+
+      - name: Run tests
+        run: python -m pytest tests/ -v --tb=short
+        working-directory: python-services

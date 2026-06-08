@@ -4,8 +4,10 @@ Aplicación web fullstack inspirada en Spotify, construida con Node.js, React y 
 
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-19+-blue.svg)](https://reactjs.org/)
+[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://python.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://postgresql.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![CI](https://github.com/AlexanderAgudelo623/Reproductor/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexanderAgudelo623/Reproductor/actions/workflows/ci.yml)
 
 ---
 
@@ -13,6 +15,7 @@ Aplicación web fullstack inspirada en Spotify, construida con Node.js, React y 
 
 **Frontend:** React 19, Vite 8, React Router 7, Axios
 **Backend:** Node.js, Express 5, JWT, Winston, bcryptjs
+**Python:** FastAPI, Pydantic, Uvicorn
 **Base de datos:** PostgreSQL 15+ con `pg` (pool de conexiones)
 **APIs externas:** Spotify, Deezer, YouTube, YouTube Music, MusicBrainz, Free Music Archive
 **Infraestructura:** Docker, Docker Compose, Nginx
@@ -204,12 +207,17 @@ Reproductor/
 ## Pruebas
 
 ```bash
-# Backend
+# Backend (31 tests)
 cd BackEnd && npm test
 
-# Frontend
-cd FrontEnd/mi-app && npx vitest run
+# Frontend (3 tests)
+cd FrontEnd/mi-app && npm test
+
+# Python Services (67 tests)
+cd python-services && source venv/bin/activate && python -m pytest
 ```
+
+Cada push ejecuta automáticamente los tres conjuntos via GitHub Actions (`.github/workflows/ci.yml`).
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "name": "backend",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.0-beta",
+  "description": "Music API backend with plugin-based search architecture (Spotify, Deezer, YouTube, MusicBrainz, FMA)",
   "main": "src/app.js",
   "type": "module",
   "scripts": {
@@ -12,7 +12,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "axios": "^1.15.1",
     "bcryptjs": "^3.0.3",
