@@ -27,7 +27,8 @@ export async function searchDeezer(query, limit = 10) {
       return [];
     }
 
-    return res.data.data.map((track) => ({
+    const tracks = res.data.data.slice(0, searchLimit);
+    return tracks.map((track) => ({
       id: String(track.id),
       name: track.title,
       artist: track.artist?.name ?? "",

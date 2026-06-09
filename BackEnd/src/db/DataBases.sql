@@ -12,21 +12,40 @@
 -- ===========================================
 
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
+
+-- ===========================================
+-- TABLA: TOKENS DE REFRESCO
+-- ===========================================
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    revoked BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens (user_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens (token_hash);
 
 -- ===========================================
 -- TABLA: FAVORITOS (TRACKS)
 -- ===========================================
 
 CREATE TABLE IF NOT EXISTS favorite_tracks (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     external_track_id VARCHAR(255) NOT NULL,
     source VARCHAR(50) NOT NULL CHECK (source IN ('spotify', 'musicbrainz', 'fma', 'youtube', 'youtube-music', 'deezer')),
@@ -47,7 +66,7 @@ CREATE INDEX IF NOT EXISTS idx_favorite_tracks_added_at ON favorite_tracks (adde
 -- ===========================================
 
 CREATE TABLE IF NOT EXISTS search_history (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     query VARCHAR(255) NOT NULL,
     results_count INTEGER DEFAULT 0,
@@ -62,7 +81,7 @@ CREATE INDEX IF NOT EXISTS idx_search_history_searched_at ON search_history (sea
 -- ===========================================
 
 CREATE TABLE IF NOT EXISTS playlists (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
@@ -77,7 +96,7 @@ CREATE INDEX IF NOT EXISTS idx_playlists_user_id ON playlists (user_id);
 -- ===========================================
 
 CREATE TABLE IF NOT EXISTS playlist_tracks (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     playlist_id INTEGER NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
     external_track_id VARCHAR(255) NOT NULL,
     source VARCHAR(50) NOT NULL CHECK (source IN ('spotify', 'musicbrainz', 'fma', 'youtube', 'youtube-music', 'deezer')),

@@ -30,8 +30,6 @@ export const searchController = async (req, res) => {
       Math.max(1, parseInt(req.query.limit) || DEFAULT_LIMIT)
     );
 
-    const { results, errors } = await pluginRegistry.searchAll(query, { limit, page });
-
     const availablePlugins = pluginRegistry.getAvailable();
 
     if (availablePlugins.length === 0) {
@@ -41,7 +39,28 @@ export const searchController = async (req, res) => {
       });
     }
 
-    if (errors.length === availablePlugins.length) {
+    let sources = null;
+    if (req.query.sources) {
+      sources = req.query.sources
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    const { results, errors } = await pluginRegistry.searchAll(query, { limit, page, plugins: sources });
+
+    const searchedPlugins = sources
+      ? availablePlugins.filter((p) => sources.includes(p.name))
+      : availablePlugins;
+
+    if (searchedPlugins.length === 0) {
+      return res.status(400).json({
+        error: "No enabled plugins match the request",
+        details: "The requested sources are not available. Check /api/plugins for available sources.",
+      });
+    }
+
+    if (errors.length === searchedPlugins.length && Object.keys(results).length === 0) {
       return res.status(500).json({
         error: "All search services failed",
         details: Object.fromEntries(
@@ -74,7 +93,7 @@ export const searchController = async (req, res) => {
         limit,
       },
       sources: Object.fromEntries(
-        availablePlugins.map((p) => [p.name, results[p.name]?.length ?? 0])
+        searchedPlugins.map((p) => [p.name, results[p.name]?.length ?? 0])
       ),
     };
 

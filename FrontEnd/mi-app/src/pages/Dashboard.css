@@ -90,3 +90,25 @@
   color: rgba(230, 237, 243, 0.6);
   font-size: 1rem;
 }
+
+.dashboard-plugin-warning {
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: #ffc107;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.dashboard-plugin-warning a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.dashboard-plugin-warning a:hover {
+  color: var(--accent-light);
+  text-decoration: underline;
+}

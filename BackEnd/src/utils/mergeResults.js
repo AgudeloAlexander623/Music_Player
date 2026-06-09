@@ -1,6 +1,28 @@
+/**
+ * MERGE RESULTS — Fusiona resultados de múltiples fuentes
+ *
+ * Este módulo centraliza la lógica de deduplicación y fusión
+ * de resultados de búsqueda provenientes de diferentes plugins.
+ *
+ * ESTRATEGIA DE DEDUPLICACIÓN:
+ * - Todos los resultados se deduplican por clave compuesta source-id
+ * - YouTube y YouTube Music comparten videoId, por lo que se usa
+ *   el videoId como clave de deduplicación entre ellos (el que
+ *   tenga el mismo videoId pero distinto source se considera el mismo)
+ * - Spotify y MusicBrainz se cruzan por nombre+artista normalizados
+ * - FMA, Deezer se deduplican solo por source-id
+ *
+ * FLUJO:
+ * 1. Se reciben los resultados de cada plugin como un objeto
+ *    con propiedades nombradas (spotify, musicbrainz, etc.)
+ * 2. Se procesan en orden de prioridad: Spotify → MusicBrainz → FMA
+ *    → YouTube/YouTube Music (fusionados) → Deezer
+ * 3. Se retorna un array plano sin duplicados
+ */
+
 const normalize = (value) => (value ?? "").trim().toLowerCase();
 
-export function mergeResults(...sources) {
+export function mergeResults(sources = {}) {
   const results = [];
   const seenIds = new Set();
 
@@ -12,7 +34,14 @@ export function mergeResults(...sources) {
     }
   };
 
-  const [spotify = [], musicbrainz = [], fma = [], youtube = [], deezer = [], youtubeMusic = []] = sources;
+  const {
+    spotify = [],
+    musicbrainz = [],
+    fma = [],
+    youtube = [],
+    deezer = [],
+    youtubeMusic = [],
+  } = sources;
 
   spotify.forEach((sp) => {
     const match = musicbrainz.find(
@@ -40,66 +69,26 @@ export function mergeResults(...sources) {
   });
 
   fma.forEach(addIfNotDuplicate);
-  youtube.forEach(addIfNotDuplicate);
-  deezer.forEach(addIfNotDuplicate);
-  youtubeMusic.forEach(addIfNotDuplicate);
 
-  return results;
-}
-
-// agregaremos las que permitan implementar Youtube Music y Youtube, 
-// que no tienen un ID común con las otras fuentes, pero sí entre ellas. 
-// La idea es que si una canción aparece en ambas, 
-// se considere la misma canción, aunque no tenga 
-// un ID común con Spotify o MusicBrainz. Para esto, 
-// usaremos el ID de YouTube como clave para evitar duplicados entre YouTube y YouTube Music, 
-// pero permitiremos que estas canciones se mezclen con las de Spotify y MusicBrainz sin forzar 
-// una coincidencia exacta de nombre/artista.
-export function mergeYouTubeResults(youtubeResults, youtubeMusicResults) {
-  const results = [];
   const seenYouTubeIds = new Set();
 
-  youtubeResults.forEach((yt) => {
-    seenYouTubeIds.add(yt.videoId);
-    results.push(yt);
+  youtube.forEach((yt) => {
+    if (yt.videoId) {
+      if (seenYouTubeIds.has(yt.videoId)) return;
+      seenYouTubeIds.add(yt.videoId);
+    }
+    addIfNotDuplicate(yt);
   });
 
-  youtubeMusicResults.forEach((ytm) => {
-    if (!seenYouTubeIds.has(ytm.videoId)) {
-      results.push(ytm);
+  youtubeMusic.forEach((ytm) => {
+    if (ytm.videoId) {
+      if (seenYouTubeIds.has(ytm.videoId)) return;
+      seenYouTubeIds.add(ytm.videoId);
     }
-    seenYouTubeIds.add(ytm.videoId);
-
-    while (results.length > 20){
-      results.pop();
-    }
-    // Si el resultado de YouTube Music es el mismo que el de YouTube, 
-    // se considerará la misma canción, pero se mantendrá la información 
-    // de ambas fuentes. Esto permite que si una canción aparece en ambas, 
-    // se muestre como una sola entrada, 
-    // pero con la información combinada de YouTube y YouTube Music.
-
+    addIfNotDuplicate(ytm);
   });
+
+  deezer.forEach(addIfNotDuplicate);
+
   return results;
-}
-
-// exportamos deezer para que pueda ser usado en el servicio de búsqueda,
-// aunque no se mezcle con las otras fuentes, ya que no tiene un ID común con ellas.
-export function mergeDeezerResults(deezerResults){
-  const results = [];
-  const seenDeezerIds = new Set();
-
-  deezerResults.forEach((dz) =>{
-    if (seenDeezerIds.has(dz.id)){
-      return;
-    }
-
-    seenDeezerIds.add(dz.id);
-    results.push(dz);
-
-    while (results.length > 20){
-      results.pop();
-    }
-    
-  });
 }

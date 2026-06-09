@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { usePlayer } from '../App';
 import ContentSection from '../components/ContentSection';
 import SearchResults from '../components/SearchResults';
 import api from '../services/api';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
+import { getAllEnabled } from '../utils/pluginStorage';
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -22,27 +24,45 @@ export default function Dashboard() {
   const [selectedGenre, setSelectedGenre] = useState('All');
   const toast = useToast();
   const { isGuest } = useAuth();
-
-  useEffect(() => {
-    fetchDashboardData();
+  const { allDisabled, sourcesParam } = useMemo(() => {
+    const stored = getAllEnabled();
+    return {
+      allDisabled: stored !== null && stored.length === 0,
+      sourcesParam: stored && stored.length > 0 ? stored.join(',') : null,
+    };
   }, []);
 
   useEffect(() => {
+    if (!allDisabled) {
+      fetchDashboardData();
+    } else {
+      setLoading(false);
+    }
+  }, [allDisabled]);
+
+  useEffect(() => {
+    if (allDisabled) return;
     if (searchQuery.length >= 2) {
       handleSearch();
     } else if (searchQuery.length === 0) {
       setSearched(false);
       setSearchResults([]);
     }
-  }, [searchQuery]);
+  }, [searchQuery, allDisabled]);
+
+  const buildSearchUrl = (query, limit = 20) => {
+    let url = `/search?q=${encodeURIComponent(query.trim())}&limit=${limit}`;
+    if (sourcesParam) url += `&sources=${sourcesParam}`;
+    return url;
+  };
 
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
       const [playlistRes, tracksRes, albumRes] = await Promise.all([
         api.get('/playlists'),
-        api.get('/search?q=popular&limit=20'),
-        api.get('/search?q=album&limit=20'),
+        api.get(buildSearchUrl('popular')),
+        api.get(buildSearchUrl('album')),
       ]);
 
       setTopPlaylists(playlistRes.data.playlists?.slice(0, 10) || []);
@@ -94,7 +114,7 @@ export default function Dashboard() {
     setSearching(true);
     setSearched(true);
     try {
-      const res = await api.get(`/search?q=${encodeURIComponent(searchQuery.trim())}&limit=20`);
+      const res = await api.get(buildSearchUrl(searchQuery.trim()));
       setSearchResults(res.data.tracks || []);
     } catch {
       toast.error('Error en la búsqueda');
@@ -162,6 +182,13 @@ export default function Dashboard() {
   return (
     <>
       <h1>Dashboard</h1>
+
+      {allDisabled && (
+        <div className="dashboard-plugin-warning" role="alert">
+          <strong>Todos los plugins están desactivados.</strong> La aplicación no funcionará de manera efectiva.{' '}
+          <Link to="/profile">Activa al menos un plugin en Preferencias</Link> para poder buscar música.
+        </div>
+      )}
 
       {searched && (
         <div className="dashboard-search-results">

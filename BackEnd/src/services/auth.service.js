@@ -24,6 +24,10 @@
 
 import jwt from 'jsonwebtoken';
 import bcryptjs from 'bcryptjs';
+import crypto from 'crypto';
+
+const REFRESH_TOKEN_BYTES = 40;
+const REFRESH_TOKEN_EXPIRY_DAYS = 30;
 
 class AuthServiceError extends Error {
   constructor(message, statusCode) {
@@ -249,4 +253,45 @@ export function extractTokenFromHeader(authHeader) {
     if (error instanceof AuthServiceError) throw error;
     throw new AuthServiceError(`Invalid authorization header: ${error.message}`, 401);
   }
+}
+
+/**
+ * GENERAR TOKEN DE REFRESCO
+ *
+ * Crea un token aleatorio seguro para renovar sesiones
+ * - 40 bytes hex (80 caracteres)
+ * - Expira en 30 días
+ * - Se almacena hasheado en BD
+ *
+ * RETORNA:
+ * {
+ *   token: string (token plano para el cliente),
+ *   tokenHash: string (SHA-256 para BD),
+ *   expiresAt: Date
+ * }
+ */
+export function generateRefreshToken() {
+  try {
+    const token = crypto.randomBytes(REFRESH_TOKEN_BYTES).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRY_DAYS);
+
+    return { token, tokenHash, expiresAt };
+  } catch (error) {
+    throw new AuthServiceError(`Could not generate refresh token: ${error.message}`, 500);
+  }
+}
+
+/**
+ * HASHEAR TOKEN DE REFRESCO
+ *
+ * Convierte un token plano a su hash SHA-256
+ * Útil para buscar tokens en BD sin almacenarlos en texto plano
+ */
+export function hashRefreshToken(token) {
+  if (!token) {
+    throw new AuthServiceError('Refresh token is required', 401);
+  }
+  return crypto.createHash('sha256').update(token).digest('hex');
 }

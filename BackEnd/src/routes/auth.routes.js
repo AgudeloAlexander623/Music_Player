@@ -5,7 +5,10 @@ import {
   login,
   guestLogin,
   verifyTokenEndpoint,
+  refreshToken,
+  logout,
 } from '../controllers/auth.controller.js';
+import { verifyTokenMiddleware } from '../middleware/verifyToken.js';
 
 const router = express.Router();
 
@@ -23,5 +26,7 @@ router.post('/register', register);
 router.post('/login', login);
 router.post('/guest', guestLogin);
 router.post('/verify', verifyTokenEndpoint);
+router.post('/refresh', refreshToken);
+router.post('/logout', verifyTokenMiddleware, logout);
 
 export default router;
