@@ -1,4 +1,7 @@
 import axios from "axios";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const TOKEN_URL = "https://accounts.spotify.com/api/token";
 const SEARCH_URL = "https://api.spotify.com/v1/search";
@@ -11,6 +14,11 @@ let accessToken = null;
 let expiresAt = 0;
 let tokenPromise = null;
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const CONFIG_DIR = join(__dirname, "..", "config");
+const CONFIG_PATH = join(CONFIG_DIR, "spotify-credentials.json");
+
 class SpotifyServiceError extends Error {
   constructor(message, statusCode, retryable = false) {
     super(message);
@@ -20,10 +28,54 @@ class SpotifyServiceError extends Error {
   }
 }
 
+function loadCredentials() {
+  if (!existsSync(CONFIG_PATH)) return null;
+  try {
+    const raw = readFileSync(CONFIG_PATH, "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function saveCredentials(clientId, clientSecret) {
+  if (!existsSync(CONFIG_DIR)) {
+    mkdirSync(CONFIG_DIR, { recursive: true });
+  }
+  writeFileSync(CONFIG_PATH, JSON.stringify({ clientId, clientSecret }, null, 2), {
+    mode: 0o600,
+  });
+}
+
+function getClientId() {
+  if (
+    process.env.SPOTIFY_CLIENT_ID &&
+    !process.env.SPOTIFY_CLIENT_ID.startsWith("your_")
+  ) {
+    return process.env.SPOTIFY_CLIENT_ID;
+  }
+  const stored = loadCredentials();
+  return stored?.clientId ?? null;
+}
+
+function getClientSecret() {
+  if (
+    process.env.SPOTIFY_CLIENT_SECRET &&
+    !process.env.SPOTIFY_CLIENT_SECRET.startsWith("your_")
+  ) {
+    return process.env.SPOTIFY_CLIENT_SECRET;
+  }
+  const stored = loadCredentials();
+  return stored?.clientSecret ?? null;
+}
+
 async function getToken() {
-  if (!process.env.SPOTIFY_CLIENT_ID || !process.env.SPOTIFY_CLIENT_SECRET) {
+  const clientId = getClientId();
+  const clientSecret = getClientSecret();
+
+  if (!clientId || !clientSecret) {
     throw new SpotifyServiceError(
-      "Spotify credentials (SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET) are missing from .env",
+      "Spotify credentials (SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET) are missing from .env or config file",
       400,
       false
     );
@@ -40,9 +92,7 @@ async function getToken() {
           headers: {
             Authorization:
               "Basic " +
-              Buffer.from(
-                `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
-              ).toString("base64"),
+              Buffer.from(`${clientId}:${clientSecret}`).toString("base64"),
             "Content-Type": "application/x-www-form-urlencoded",
           },
           timeout: TOKEN_TIMEOUT_MS,
@@ -170,4 +220,63 @@ export async function searchSpotify(query, limit = 10, page = 1) {
     500,
     false
   );
+}
+
+export async function validateSpotifyCredentials(clientId, clientSecret) {
+  if (!clientId || !clientSecret) {
+    return { valid: false, error: "Client ID and Client Secret are required" };
+  }
+  try {
+    await axios.post(
+      TOKEN_URL,
+      new URLSearchParams({ grant_type: "client_credentials" }),
+      {
+        headers: {
+          Authorization:
+            "Basic " +
+            Buffer.from(`${clientId}:${clientSecret}`).toString("base64"),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        timeout: TOKEN_TIMEOUT_MS,
+      }
+    );
+    return { valid: true };
+  } catch (error) {
+    const status = error.response?.status;
+    if (status === 400) {
+      return { valid: false, error: "Invalid client ID or client secret" };
+    }
+    return {
+      valid: false,
+      error: `Validation failed: ${error.response?.statusText || error.message}`,
+    };
+  }
+}
+
+export async function configureSpotify(clientId, clientSecret) {
+  const validation = await validateSpotifyCredentials(clientId, clientSecret);
+  if (!validation.valid) {
+    return { success: false, error: validation.error };
+  }
+  saveCredentials(clientId, clientSecret);
+  _resetForTest();
+  return { success: true };
+}
+
+export function getSpotifyStatus() {
+  const fromEnv =
+    process.env.SPOTIFY_CLIENT_ID &&
+    !process.env.SPOTIFY_CLIENT_ID.startsWith("your_") &&
+    process.env.SPOTIFY_CLIENT_SECRET &&
+    !process.env.SPOTIFY_CLIENT_SECRET.startsWith("your_");
+
+  const fromFile = loadCredentials();
+
+  const configured = Boolean(fromEnv || fromFile);
+
+  return {
+    configured,
+    source: fromEnv ? "env" : fromFile ? "config-file" : null,
+    hasToken: Boolean(accessToken && !isTokenExpired()),
+  };
 }

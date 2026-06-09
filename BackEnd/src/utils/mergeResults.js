@@ -1,23 +1,17 @@
 /**
  * MERGE RESULTS — Fusiona resultados de múltiples fuentes
  *
- * Este módulo centraliza la lógica de deduplicación y fusión
- * de resultados de búsqueda provenientes de diferentes plugins.
+ * Centraliza la deduplicación y fusión de resultados de búsqueda
+ * de todos los plugins registrados.
  *
- * ESTRATEGIA DE DEDUPLICACIÓN:
- * - Todos los resultados se deduplican por clave compuesta source-id
- * - YouTube y YouTube Music comparten videoId, por lo que se usa
- *   el videoId como clave de deduplicación entre ellos (el que
- *   tenga el mismo videoId pero distinto source se considera el mismo)
- * - Spotify y MusicBrainz se cruzan por nombre+artista normalizados
- * - FMA, Deezer se deduplican solo por source-id
- *
- * FLUJO:
- * 1. Se reciben los resultados de cada plugin como un objeto
- *    con propiedades nombradas (spotify, musicbrainz, etc.)
- * 2. Se procesan en orden de prioridad: Spotify → MusicBrainz → FMA
- *    → YouTube/YouTube Music (fusionados) → Deezer
- * 3. Se retorna un array plano sin duplicados
+ * ESTRATEGIA:
+ *   - Deduplicación por clave compuesta source-id
+ *   - YouTube y YouTube Music comparten {videoId} como clave de
+ *     deduplicación entre sí
+ *   - Los resultados se ordenan priorizando fuentes con audio
+ *     reproducible sobre fuentes de solo metadatos
+ *   - Orden de fusión: Deezer → FMA → YouTube → YouTube Music
+ *     → Internet Archive → MusicBrainz
  */
 
 const normalize = (value) => (value ?? "").trim().toLowerCase();
@@ -35,38 +29,18 @@ export function mergeResults(sources = {}) {
   };
 
   const {
-    spotify = [],
-    musicbrainz = [],
+    deezer = [],
     fma = [],
     youtube = [],
-    deezer = [],
     youtubeMusic = [],
+    internetarchive = [],
+    spotify = [],
+    musicbrainz = [],
   } = sources;
 
-  spotify.forEach((sp) => {
-    const match = musicbrainz.find(
-      (mb) =>
-        normalize(mb.name) === normalize(sp.name) &&
-        normalize(mb.artist) === normalize(sp.artist)
-    );
-    addIfNotDuplicate({ ...sp, musicbrainzId: match ? match.id : null });
-  });
+  /* ── Fuentes con audio reproducible ── */
 
-  musicbrainz.forEach((mb) => {
-    const alreadyIncluded = results.some((r) => r.musicbrainzId === mb.id);
-    if (!alreadyIncluded) {
-      addIfNotDuplicate({
-        id: mb.id,
-        name: mb.name,
-        artist: mb.artist,
-        album: mb.album ?? "",
-        albumImage: mb.albumImage ?? "",
-        previewUrl: mb.previewUrl ?? null,
-        source: "musicbrainz",
-        musicbrainzId: mb.id,
-      });
-    }
-  });
+  deezer.forEach(addIfNotDuplicate);
 
   fma.forEach(addIfNotDuplicate);
 
@@ -88,7 +62,32 @@ export function mergeResults(sources = {}) {
     addIfNotDuplicate(ytm);
   });
 
-  deezer.forEach(addIfNotDuplicate);
+  internetarchive.forEach(addIfNotDuplicate);
+
+  /* ── Spotify (deshabilitado, se deja por compatibilidad) ── */
+  spotify.forEach(addIfNotDuplicate);
+
+  /* ── Fuentes de solo metadatos ── */
+  musicbrainz.forEach((mb) => {
+    const alreadyIncluded = results.some(
+      (r) =>
+        normalize(r.name) === normalize(mb.name) &&
+        normalize(r.artist) === normalize(mb.artist) &&
+        r.musicbrainzId === mb.id
+    );
+    if (!alreadyIncluded) {
+      addIfNotDuplicate({
+        id: mb.id,
+        name: mb.name,
+        artist: mb.artist,
+        album: mb.album ?? "",
+        albumImage: mb.albumImage ?? "",
+        previewUrl: mb.previewUrl ?? null,
+        source: "musicbrainz",
+        musicbrainzId: mb.id,
+      });
+    }
+  });
 
   return results;
 }

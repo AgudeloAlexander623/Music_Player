@@ -64,6 +64,9 @@ FrontEnd/mi-app/node_modules/
 .eslintignore
 coverage/
 
+# Spotify credentials (configured via UI)
+BackEnd/src/config/spotify-credentials.json
+
 # Logs
 logs/
 *.log

@@ -1,21 +1,3 @@
-/**
- * PRUEBAS DEL SERVICIO DE YOUTUBE
- *
- * Valida el comportamiento del servicio de YouTube con su
- * estrategia de dos niveles: YouTube Data API + Invidious fallback.
- *
- * ESCENARIOS CUBIERTOS:
- * - Búsqueda exitosa con YouTube API
- * - Fallback a Invidious cuando no hay API key
- * - Fallback a Invidious cuando la API key falla
- * - Resultados vacíos de ambas fuentes
- * - Normalización de datos desde YouTube API e Invidious
- * - Formatos de duración ISO 8601
- * - YouTube Music con sufijo " music" en el query
- * - Errores de red y timeout en ambas estrategias
- * - Estado de diagnóstico del servicio
- */
-
 import { describe, it, beforeEach, mock, after } from "node:test";
 import assert from "node:assert/strict";
 import axios from "axios";
@@ -27,6 +9,52 @@ import {
 } from "../services/youtube.services.js";
 
 const ORIGINAL_ENV = { ...process.env };
+
+const MOCK_YT_INITIAL_DATA = {
+  contents: {
+    twoColumnSearchResultsRenderer: {
+      primaryContents: {
+        sectionListRenderer: {
+          contents: [
+            {
+              itemSectionRenderer: {
+                contents: [],
+              },
+            },
+          ],
+        },
+      },
+    },
+  },
+};
+
+function buildMockHTML(items = []) {
+  const videoContents = items.map((v, i) => ({
+    videoRenderer: {
+      videoId: v.videoId || `vid_${i}`,
+      title: {
+        runs: [{ text: v.title || "Test Video" }],
+      },
+      ownerText: {
+        runs: [{ text: v.channel || "Test Channel" }],
+      },
+      lengthText: {
+        simpleText: v.duration || "3:30",
+      },
+      thumbnail: {
+        thumbnails: [
+          { url: v.thumbnail || `https://i.ytimg.com/vi/${v.videoId || i}/hqdefault.jpg`, width: 480, height: 360 },
+        ],
+      },
+    },
+  }));
+
+  MOCK_YT_INITIAL_DATA.contents.twoColumnSearchResultsRenderer.primaryContents
+    .sectionListRenderer.contents[0].itemSectionRenderer.contents = videoContents;
+
+  const json = JSON.stringify(MOCK_YT_INITIAL_DATA);
+  return `<html><script>window.ytInitialData = ${json};</script></html>`;
+}
 
 function mockYouTubeSearchResponse(items = []) {
   return {
@@ -55,18 +83,6 @@ function mockYouTubeDetailsResponse(durations = {}) {
         contentDetails: { duration },
       })),
     },
-  };
-}
-
-function mockInvidiousResponse(items = []) {
-  return {
-    data: items.map((v, i) => ({
-      title: v.title || "Test Video",
-      author: v.channel || "Test Channel",
-      videoId: v.videoId || `inv_video_${i}`,
-      lengthSeconds: v.duration != null ? String(v.duration) : undefined,
-      thumbnail: v.thumbnail || `https://img.youtube.com/vi/${v.videoId || i}/hqdefault.jpg`,
-    })),
   };
 }
 
@@ -154,10 +170,10 @@ describe("YouTube Service", () => {
       });
 
       const results = await searchYouTube("durations");
-      assert.equal(results[0].duration, 3750); // 1h 2m 30s
-      assert.equal(results[1].duration, 300);  // 5m
-      assert.equal(results[2].duration, 30);   // 30s
-      assert.equal(results[3].duration, 0);    // 0s
+      assert.equal(results[0].duration, 3750);
+      assert.equal(results[1].duration, 300);
+      assert.equal(results[2].duration, 30);
+      assert.equal(results[3].duration, 0);
     });
 
     it("retorna null si no hay duracion", async () => {
@@ -196,47 +212,51 @@ describe("YouTube Service", () => {
       assert.equal(results[0].duration, null);
     });
 
-    it("usa Invidious como fallback cuando no hay API key", async () => {
+    it("usa scrapeo directo como fallback cuando no hay API key", async () => {
       delete process.env.YOUTUBE_API_KEY;
       _resetForTest();
 
       mock.method(axios, "get", (url) => {
-        if (url.includes("invidious") && url.includes("api/v1/search")) {
-          return Promise.resolve(mockInvidiousResponse([
-            { videoId: "inv_001", title: "Fallback Song", channel: "Fallback Artist", duration: 240 },
-          ]));
+        if (url.includes("youtube.com/results")) {
+          return Promise.resolve({
+            data: buildMockHTML([
+              { videoId: "sc_001", title: "Fallback Song", channel: "Fallback Artist", duration: "4:00" },
+            ]),
+          });
         }
         return Promise.reject(new Error("Unexpected URL"));
       });
 
       const results = await searchYouTube("fallback test");
       assert.equal(results.length, 1);
-      assert.equal(results[0].videoId, "inv_001");
+      assert.equal(results[0].videoId, "sc_001");
       assert.equal(results[0].title, "Fallback Song");
       assert.equal(results[0].artist, "Fallback Artist");
       assert.equal(results[0].duration, 240);
       assert.equal(results[0].source, "youtube");
     });
 
-    it("usa Invidious como fallback cuando API key es placeholder", async () => {
+    it("usa scrapeo directo cuando API key es placeholder", async () => {
       process.env.YOUTUBE_API_KEY = "your_youtube_api_key_here";
       _resetForTest();
 
       mock.method(axios, "get", (url) => {
-        if (url.includes("invidious") && url.includes("api/v1/search")) {
-          return Promise.resolve(mockInvidiousResponse([
-            { videoId: "inv_002", title: "Placeholder Fallback", channel: "Artist" },
-          ]));
+        if (url.includes("youtube.com/results")) {
+          return Promise.resolve({
+            data: buildMockHTML([
+              { videoId: "sc_002", title: "Placeholder Fallback", channel: "Artist" },
+            ]),
+          });
         }
         return Promise.reject(new Error("Unexpected URL"));
       });
 
       const results = await searchYouTube("test");
       assert.equal(results.length, 1);
-      assert.equal(results[0].videoId, "inv_002");
+      assert.equal(results[0].videoId, "sc_002");
     });
 
-    it("usa Invidious como fallback cuando YouTube API falla con 403", async () => {
+    it("usa scrapeo directo cuando YouTube API falla con 403", async () => {
       let apiCalled = false;
       mock.method(axios, "get", (url) => {
         if (url.includes("youtube/v3/search")) {
@@ -245,10 +265,12 @@ describe("YouTube Service", () => {
             response: { status: 403, statusText: "Forbidden" },
           });
         }
-        if (url.includes("invidious") && url.includes("api/v1/search")) {
-          return Promise.resolve(mockInvidiousResponse([
-            { videoId: "inv_003", title: "API Fallback", channel: "Artist" },
-          ]));
+        if (url.includes("youtube.com/results")) {
+          return Promise.resolve({
+            data: buildMockHTML([
+              { videoId: "sc_003", title: "API Fallback", channel: "Artist" },
+            ]),
+          });
         }
         return Promise.reject(new Error("Unexpected URL"));
       });
@@ -256,39 +278,16 @@ describe("YouTube Service", () => {
       const results = await searchYouTube("api-key-invalid");
       assert.equal(apiCalled, true);
       assert.equal(results.length, 1);
-      assert.equal(results[0].videoId, "inv_003");
+      assert.equal(results[0].videoId, "sc_003");
     });
 
-    it("retorna array vacio si YouTube API e Invidious fallan", async () => {
+    it("retorna array vacio si YouTube API y scrapeo fallan", async () => {
       mock.method(axios, "get", () =>
         Promise.reject({ message: "Network error" })
       );
 
       const results = await searchYouTube("everything-down");
       assert.deepEqual(results, []);
-    });
-
-    it("intenta multiples instancias de Invidious", async () => {
-      delete process.env.YOUTUBE_API_KEY;
-      _resetForTest();
-
-      let callCount = 0;
-      mock.method(axios, "get", (url) => {
-        if (url.includes("invidious")) {
-          callCount++;
-          if (callCount <= 2) {
-            return Promise.reject({ code: "ECONNABORTED" });
-          }
-          return Promise.resolve(mockInvidiousResponse([
-            { videoId: "inv_multi", title: "After Retry", channel: "Artist" },
-          ]));
-        }
-        return Promise.reject(new Error("Unexpected URL"));
-      });
-
-      const results = await searchYouTube("multi-instance");
-      assert.equal(results.length, 1);
-      assert(callCount >= 3);
     });
 
     it("incluye thumbnail en resultados", async () => {
@@ -381,10 +380,12 @@ describe("YouTube Service", () => {
       _resetForTest();
 
       mock.method(axios, "get", (url) => {
-        if (url.includes("invidious")) {
-          return Promise.resolve(mockInvidiousResponse([
-            { videoId: "stat_vid", title: "Test", channel: "Test" },
-          ]));
+        if (url.includes("youtube.com/results")) {
+          return Promise.resolve({
+            data: buildMockHTML([
+              { videoId: "stat_vid", title: "Test", channel: "Test" },
+            ]),
+          });
         }
         return Promise.reject(new Error("Unexpected URL"));
       });
@@ -392,7 +393,7 @@ describe("YouTube Service", () => {
       await searchYouTube("status test");
       const status = getYouTubeServiceStatus();
       assert.equal(status.totalSearches, 1);
-      assert.equal(status.invidiousAvailable, true);
+      assert.equal(status.scrapeAvailable, true);
     });
   });
 });

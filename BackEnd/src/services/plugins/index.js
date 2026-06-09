@@ -5,14 +5,17 @@ import youtubePlugin from './youtube.plugin.js';
 import youtubeMusicPlugin from './youtube_music.plugin.js';
 import musicbrainzPlugin from './musicbrainz.plugin.js';
 import fmaPlugin from './fma.plugin.js';
+import internetarchivePlugin from './internetarchive.plugin.js';
 
 const registry = new PluginRegistry();
+
 registry.register(spotifyPlugin);
 registry.register(deezerPlugin);
 registry.register(youtubePlugin);
 registry.register(youtubeMusicPlugin);
 registry.register(musicbrainzPlugin);
 registry.register(fmaPlugin);
+registry.register(internetarchivePlugin);
 
 export default registry;
 export { PluginRegistry };

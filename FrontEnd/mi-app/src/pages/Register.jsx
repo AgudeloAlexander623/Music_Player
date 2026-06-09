@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast';
 import './Auth.css';
 
 export default function Register() {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -15,6 +16,10 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (username.trim().length < 3) {
+      toast.error('El nombre de usuario debe tener al menos 3 caracteres');
+      return;
+    }
     if (password !== confirmPassword) {
       toast.error('Las contraseñas no coinciden');
       return;
@@ -25,7 +30,7 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      await register(email, password);
+      await register(email, password, username.trim());
       toast.success('Cuenta creada exitosamente');
       navigate('/');
     } catch (err) {
@@ -39,6 +44,15 @@ export default function Register() {
     <div className="auth-container">
       <h2 className="auth-title">Registro</h2>
       <form onSubmit={handleSubmit} className="auth-form">
+        <input
+          type="text"
+          placeholder="Nombre de usuario"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+          minLength={3}
+          className="auth-input"
+        />
         <input
           type="email"
           placeholder="Email"

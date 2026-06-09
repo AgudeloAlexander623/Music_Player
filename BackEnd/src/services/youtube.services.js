@@ -1,66 +1,30 @@
-/**
- * SERVICIO DE YOUTUBE Y YOUTUBE MUSIC
- *
- * Este módulo centraliza toda la comunicación con YouTube.
- * Implementa una estrategia de dos niveles para garantizar
- * que los plugins de YouTube y YouTube Music estén siempre
- * disponibles, incluso sin una API Key de Google.
- *
- * ESTRATEGIA DE BÚSQUEDA:
- * 1. YouTube Data API v3 — si hay YOUTUBE_API_KEY configurada
- *    y no es un placeholder, se intenta usar primero.
- * 2. Invidious API — fallback automático cuando no hay API key
- *    o cuando la API key falla. Usa una lista rotativa de
- *    instancias públicas de Invidious.
- *
- * DIAGNÓSTICO EN CONSOLA:
- * - Cada intento de búsqueda se registra con su estrategia
- * - Los errores HTTP se capturan con código y mensaje
- * - El estado de salud del servicio se puede consultar
- *   mediante getYouTubeServiceStatus()
- */
-
 import logger from '../utils/logger.js';
 import axios from 'axios';
 
 const YOUTUBE_SEARCH_TIMEOUT = 5000;
 const YOUTUBE_DETAILS_TIMEOUT = 5000;
-const INVIDIOUS_TIMEOUT = 6000;
-
-const INVIDIOUS_INSTANCES = [
-  'https://inv.nadeko.net',
-  'https://invidious.snopyta.org',
-  'https://yewtu.be',
-  'https://inv.riverside.rocks',
-  'https://invidious.jing.rocks',
-  'https://invidious.xyz',
-];
+const SCRAPE_TIMEOUT = 8000;
 
 let lastApiCallTime = 0;
-let invidiousInstanceIndex = 0;
-let consecutiveInvidiousFailures = 0;
-const MAX_CONSECUTIVE_FAILURES = 3;
 
 let diagnosticState = {
   youtubeApiAvailable: null,
-  invidiousAvailable: null,
+  scrapeAvailable: null,
   lastYoutubeError: null,
-  lastInvidiousError: null,
+  lastScrapeError: null,
   totalSearches: 0,
-  searchesByStrategy: { youtube_api: 0, invidious: 0, none: 0 },
+  searchesByStrategy: { youtube_api: 0, scrape: 0, none: 0 },
 };
 
 export function _resetForTest() {
   lastApiCallTime = 0;
-  invidiousInstanceIndex = 0;
-  consecutiveInvidiousFailures = 0;
   diagnosticState = {
     youtubeApiAvailable: null,
-    invidiousAvailable: null,
+    scrapeAvailable: null,
     lastYoutubeError: null,
-    lastInvidiousError: null,
+    lastScrapeError: null,
     totalSearches: 0,
-    searchesByStrategy: { youtube_api: 0, invidious: 0, none: 0 },
+    searchesByStrategy: { youtube_api: 0, scrape: 0, none: 0 },
   };
 }
 
@@ -87,13 +51,19 @@ function formatDuration(durationStr) {
   return hours * 3600 + minutes * 60 + seconds;
 }
 
-let fallbackIdCounter = 0;
+function parseHHMMSS(str) {
+  if (!str) return null;
+  const parts = str.split(':').map(Number);
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 1) return parts[0];
+  return null;
+}
 
 function normalizeVideo(video, videoId, source) {
   const previewUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
-  const id = videoId || `inv_fallback_${++fallbackIdCounter}`;
   return {
-    id,
+    id: videoId || `fb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     title: video.title || 'Unknown',
     artist: video.author || video.channelTitle || 'Unknown',
     album: '',
@@ -104,7 +74,9 @@ function normalizeVideo(video, videoId, source) {
       || null,
     duration: video.lengthSeconds
       ? parseInt(video.lengthSeconds)
-      : formatDuration(video.contentDetails?.duration),
+      : video.duration
+        ? (typeof video.duration === 'number' ? video.duration : parseHHMMSS(video.duration))
+        : formatDuration(video.contentDetails?.duration),
     previewUrl,
     videoId,
     source,
@@ -182,59 +154,97 @@ async function searchYouTubeAPI(query, limit) {
   });
 }
 
-async function searchInvidious(query, limit) {
+async function searchYouTubeScrape(query, limit) {
   const searchLimit = Math.min(limit, 20);
 
-  for (let attempt = 0; attempt < INVIDIOUS_INSTANCES.length; attempt++) {
-    const instanceIndex = invidiousInstanceIndex % INVIDIOUS_INSTANCES.length;
-    const instance = INVIDIOUS_INSTANCES[instanceIndex];
+  try {
+    logger.info(`[YouTube Service] Scrapeando YouTube directamente: "${query}"`);
 
-    invidiousInstanceIndex++;
+    const response = await axios.get('https://www.youtube.com/results', {
+      params: { search_query: query },
+      timeout: SCRAPE_TIMEOUT,
+      headers: {
+        'Accept-Language': 'en-US,en;q=0.9',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
 
-    try {
-      logger.info(`[YouTube Service] Intentando Invidious: ${instance}`);
+    const html = response.data;
 
-      const response = await axios.get(`${instance}/api/v1/search`, {
-        params: {
-          q: query,
-          page: 1,
-          type: 'video',
-          sort_by: 'relevance',
-          limit: searchLimit,
-        },
-        timeout: INVIDIOUS_TIMEOUT,
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-
-      const items = response.data;
-      if (!Array.isArray(items) || items.length === 0) {
-        logger.warn(`[YouTube Service] Invidious ${instance} retornó 0 resultados`);
-        continue;
-      }
-
-      consecutiveInvidiousFailures = 0;
-      diagnosticState.invidiousAvailable = true;
-      diagnosticState.lastInvidiousError = null;
-      logger.info(`[YouTube Service] Invidious OK: ${instance} (${items.length} resultados)`);
-
-      return items.map(video => normalizeVideo(video, video.videoId, 'youtube'));
-    } catch (error) {
-      consecutiveInvidiousFailures++;
-      const errMsg = error?.response?.status
-        ? `HTTP ${error.response.status} ${error.response.statusText}`
-        : error.code === 'ECONNABORTED'
-          ? 'Timeout'
-          : error.message;
-      logger.warn(`[YouTube Service] Invidious ${instance} falló: ${errMsg}`);
-      diagnosticState.lastInvidiousError = `${instance}: ${errMsg}`;
+    const match = html.match(/ytInitialData\s*=\s*({.*?});/s);
+    if (!match) {
+      logger.warn('[YouTube Service] No se encontró ytInitialData en la página');
+      return [];
     }
-  }
 
-  diagnosticState.invidiousAvailable = false;
-  logger.error('[YouTube Service] Todas las instancias de Invidious fallaron');
-  return [];
+    let data;
+    try {
+      data = JSON.parse(match[1]);
+    } catch {
+      logger.warn('[YouTube Service] Error al parsear ytInitialData');
+      return [];
+    }
+
+    const contents =
+      data?.contents?.twoColumnSearchResultsRenderer?.primaryContents
+        ?.sectionListRenderer?.contents ?? [];
+
+    const videos = [];
+
+    for (const section of contents) {
+      const items = section?.itemSectionRenderer?.contents ?? [];
+      for (const item of items) {
+        if (videos.length >= searchLimit) break;
+
+        const vr = item?.videoRenderer;
+        if (!vr || !vr.videoId) continue;
+
+        const titleRuns = vr.title?.runs;
+        const title = titleRuns
+          ? titleRuns.map(r => r.text).join('')
+          : vr.title?.simpleText || '';
+
+        const ownerRuns = vr.ownerText?.runs;
+        const channel = ownerRuns?.[0]?.text || '';
+
+        const lengthText = vr.lengthText?.simpleText || '';
+
+        const thumbs = vr.thumbnail?.thumbnails ?? [];
+        const thumbnail = thumbs.length > 0 ? thumbs[thumbs.length - 1].url : '';
+
+        videos.push({
+          videoId: vr.videoId,
+          title,
+          author: channel,
+          duration: lengthText,
+          thumbnail,
+        });
+      }
+      if (videos.length >= searchLimit) break;
+    }
+
+    if (videos.length === 0) {
+      logger.warn('[YouTube Service] No se encontraron videos en el scrapeo');
+      return [];
+    }
+
+    logger.info(`[YouTube Service] Scrapeo exitoso: ${videos.length} resultados`);
+    diagnosticState.scrapeAvailable = true;
+    diagnosticState.lastScrapeError = null;
+
+    return videos.map(v => normalizeVideo(v, v.videoId, 'youtube'));
+  } catch (error) {
+    const errMsg = error?.response?.status
+      ? `HTTP ${error.response.status} ${error.response.statusText}`
+      : error.code === 'ECONNABORTED'
+        ? 'Timeout'
+        : error.message;
+
+    logger.warn(`[YouTube Service] Scrapeo directo falló: ${errMsg}`);
+    diagnosticState.lastScrapeError = errMsg;
+    return [];
+  }
 }
 
 async function fetchYouTubeVideos(query, limit) {
@@ -259,25 +269,24 @@ async function fetchYouTubeVideos(query, limit) {
           : error.message;
 
       logger.error(`[YouTube Service] YouTube API falló: ${errMsg}`);
-
       diagnosticState.lastYoutubeError = errMsg;
 
       if (status === 403 || status === 400) {
-        logger.warn('[YouTube Service] La API Key puede ser inválida o cuota agotada. Cambiando a Invidious.');
+        logger.warn('[YouTube Service] API Key inválida o cuota agotada. Cambiando a scrapeo directo.');
         diagnosticState.youtubeApiAvailable = false;
       } else {
-        logger.warn('[YouTube Service] Error transitorio en YouTube API. Cambiando a Invidious.');
+        logger.warn('[YouTube Service] Error transitorio. Cambiando a scrapeo directo.');
         diagnosticState.youtubeApiAvailable = null;
       }
     }
   } else {
-    logger.info('[YouTube Service] No hay YOUTUBE_API_KEY configurada. Usando Invidious como fallback.');
+    logger.info('[YouTube Service] Sin API key. Usando scrapeo directo de YouTube.');
     diagnosticState.youtubeApiAvailable = false;
     diagnosticState.lastYoutubeError = 'YOUTUBE_API_KEY no configurada';
   }
 
-  diagnosticState.searchesByStrategy.invidious++;
-  return await searchInvidious(query, limit);
+  diagnosticState.searchesByStrategy.scrape++;
+  return await searchYouTubeScrape(query, limit);
 }
 
 export async function searchYouTube(query, limit = 10) {
@@ -304,19 +313,18 @@ export function getYouTubeServiceStatus() {
   return {
     youtubeApiConfigured: activeKey,
     youtubeApiAvailable: diagnosticState.youtubeApiAvailable,
-    invidiousAvailable: diagnosticState.invidiousAvailable,
+    scrapeAvailable: diagnosticState.scrapeAvailable,
     lastYoutubeError: diagnosticState.lastYoutubeError,
-    lastInvidiousError: diagnosticState.lastInvidiousError,
+    lastScrapeError: diagnosticState.lastScrapeError,
     totalSearches: diagnosticState.totalSearches,
     searchesByStrategy: { ...diagnosticState.searchesByStrategy },
     activeStrategy: activeKey && diagnosticState.youtubeApiAvailable !== false
       ? 'youtube_api'
-      : diagnosticState.invidiousAvailable
-        ? 'invidious'
+      : diagnosticState.scrapeAvailable
+        ? 'scrape'
         : 'none',
-    invidiousInstancesAvailable: INVIDIOUS_INSTANCES.length,
     recommendedAction: !activeKey
-      ? 'Configura YOUTUBE_API_KEY en .env para mejor rendimiento y confiabilidad'
+      ? 'Configura YOUTUBE_API_KEY en .env para mejor rendimiento (opcional, el scrapeo directo funciona sin ella)'
       : diagnosticState.youtubeApiAvailable === false
         ? 'La API Key configurada falló. Verifica que sea válida y que la cuota no esté agotada.'
         : null,

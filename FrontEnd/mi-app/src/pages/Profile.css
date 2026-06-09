@@ -142,6 +142,16 @@
   cursor: not-allowed;
 }
 
+.plugin-toggle-fma {
+  border-color: rgba(70, 200, 130, 0.3);
+  background: rgba(70, 200, 130, 0.06);
+}
+
+.plugin-toggle-fma:hover {
+  background: rgba(70, 200, 130, 0.1);
+  border-color: rgba(70, 200, 130, 0.4);
+}
+
 .plugin-toggle-label {
   font-size: 0.85rem;
   color: #e6edf3;
@@ -167,5 +177,132 @@
 
 .profile-muted {
   color: rgba(230, 237, 243, 0.5);
+  font-size: 0.85rem;
+}
+
+.profile-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.profile-link:hover {
+  text-decoration: underline;
+}
+
+.profile-section-spotify {
+  border-color: rgba(30, 215, 96, 0.3);
+}
+
+.btn-spotify-config {
+  margin-top: 12px;
+  padding: 10px 20px;
+  border: 1px solid rgba(30, 215, 96, 0.4);
+  border-radius: 8px;
+  background: rgba(30, 215, 96, 0.1);
+  color: #1ed760;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-spotify-config:hover {
+  background: rgba(30, 215, 96, 0.2);
+  border-color: rgba(30, 215, 96, 0.6);
+}
+
+.spotify-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.spotify-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.spotify-field span {
+  font-size: 0.8rem;
+  color: rgba(230, 237, 243, 0.7);
+  font-weight: 600;
+}
+
+.spotify-field input {
+  padding: 10px 12px;
+  border: 1px solid rgba(30, 215, 96, 0.2);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #e6edf3;
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.spotify-field input:focus {
+  outline: none;
+  border-color: rgba(30, 215, 96, 0.6);
+}
+
+.spotify-field input::placeholder {
+  color: rgba(230, 237, 243, 0.25);
+}
+
+.spotify-error {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 77, 77, 0.1);
+  border: 1px solid rgba(255, 77, 77, 0.3);
+  color: #ff4d4d;
+  font-size: 0.8rem;
+}
+
+.spotify-form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.btn-spotify-save,
+.btn-spotify-cancel {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.btn-spotify-save {
+  border: 1px solid rgba(30, 215, 96, 0.4);
+  background: rgba(30, 215, 96, 0.15);
+  color: #1ed760;
+}
+
+.btn-spotify-save:hover:not(:disabled) {
+  background: rgba(30, 215, 96, 0.25);
+  border-color: rgba(30, 215, 96, 0.6);
+}
+
+.btn-spotify-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-spotify-cancel {
+  border: 1px solid rgba(230, 237, 243, 0.15);
+  background: transparent;
+  color: rgba(230, 237, 243, 0.6);
+}
+
+.btn-spotify-cancel:hover {
+  background: rgba(230, 237, 243, 0.05);
+  border-color: rgba(230, 237, 243, 0.25);
+}
+
+.profile-success {
+  color: #1ed760;
   font-size: 0.85rem;
 }

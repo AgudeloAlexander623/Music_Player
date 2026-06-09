@@ -1,20 +1,3 @@
-/**
- * PRUEBAS DEL SERVICIO DE FREE MUSIC ARCHIVE (FMA)
- *
- * FMA es un plugin opcional que requiere FMA_API_KEY.
- * Proporciona canciones completas libres de derechos.
- *
- * ESCENARIOS CUBIERTOS:
- * - Búsqueda exitosa con resultados normalizados
- * - Error cuando falta FMA_API_KEY
- * - Array vacío cuando no hay resultados
- * - Array vacío cuando dataset es undefined
- * - Error 4xx no recuperable
- * - Timeout en la petición
- * - Limite de resultados y paginacion
- * - Manejo de campos faltantes en cada track
- */
-
 import { describe, it, after, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 import axios from "axios";
@@ -22,25 +5,28 @@ import { searchFMA } from "../services/fma.services.js";
 
 const ORIGINAL_ENV = { ...process.env };
 
-describe("FMA Service", () => {
+describe("FMA Service (vía Audius)", () => {
   after(() => {
     Object.assign(process.env, ORIGINAL_ENV);
   });
 
   beforeEach(() => {
     mock.restoreAll();
-    process.env.FMA_API_KEY = "test-fma-key";
   });
 
   function mockTrack(overrides = {}) {
     return {
-      track_id: "12345",
-      track_title: "Test Song",
-      artist_name: "Test Artist",
-      album_title: "Test Album",
-      track_file: "https://example.com/audio.mp3",
-      track_duration: "240",
-      license_title: "CC BY-NC 4.0",
+      id: "abc123",
+      title: "Test Song",
+      user: { name: "Test Artist", handle: "testartist", id: "u1" },
+      genre: "Rock",
+      artwork: {
+        "150x150": "https://example.com/art/150.jpg",
+        "480x480": "https://example.com/art/480.jpg",
+      },
+      stream: { url: "https://example.com/stream/abc123" },
+      duration: 240,
+      license: "CC BY-NC 4.0",
       ...overrides,
     };
   }
@@ -49,46 +35,33 @@ describe("FMA Service", () => {
     it("retorna resultados normalizados", async () => {
       mock.method(axios, "get", () =>
         Promise.resolve({
-          data: { dataset: [mockTrack()] },
+          data: { data: [mockTrack()] },
         })
       );
 
       const result = await searchFMA("test", 1, 10);
       assert.equal(result.length, 1);
-      assert.equal(result[0].id, "12345");
+      assert.equal(result[0].id, "abc123");
       assert.equal(result[0].name, "Test Song");
       assert.equal(result[0].artist, "Test Artist");
-      assert.equal(result[0].album, "Test Album");
-      assert.equal(result[0].previewUrl, "https://example.com/audio.mp3");
+      assert.equal(result[0].album, "Rock");
+      assert.equal(result[0].previewUrl, "https://example.com/stream/abc123");
       assert.equal(result[0].duration, 240);
       assert.equal(result[0].source, "fma");
       assert.equal(result[0].license, "CC BY-NC 4.0");
+      assert.equal(result[0].albumImage, "https://example.com/art/480.jpg");
     });
 
-    it("lanza error si falta FMA_API_KEY", async () => {
-      delete process.env.FMA_API_KEY;
-
-      await assert.rejects(
-        () => searchFMA("test", 1, 10),
-        (err) => {
-          assert.equal(err.name, "FMAServiceError");
-          assert.equal(err.statusCode, 400);
-          assert.match(err.message, /FMA_API_KEY/);
-          return true;
-        }
-      );
-    });
-
-    it("retorna array vacio si no hay dataset", async () => {
+    it("retorna array vacio si no hay data", async () => {
       mock.method(axios, "get", () =>
-        Promise.resolve({ data: { dataset: [] } })
+        Promise.resolve({ data: { data: [] } })
       );
 
       const result = await searchFMA("asdfghjkl", 1, 10);
       assert.deepEqual(result, []);
     });
 
-    it("retorna array vacio si dataset es undefined", async () => {
+    it("retorna array vacio si data es undefined", async () => {
       mock.method(axios, "get", () =>
         Promise.resolve({ data: {} })
       );
@@ -97,9 +70,9 @@ describe("FMA Service", () => {
       assert.deepEqual(result, []);
     });
 
-    it("retorna array vacio si dataset no es array", async () => {
+    it("retorna array vacio si data no es array", async () => {
       mock.method(axios, "get", () =>
-        Promise.resolve({ data: { dataset: null } })
+        Promise.resolve({ data: { data: null } })
       );
 
       const result = await searchFMA("null", 1, 10);
@@ -109,7 +82,9 @@ describe("FMA Service", () => {
     it("usa 'Unknown' para campos faltantes", async () => {
       mock.method(axios, "get", () =>
         Promise.resolve({
-          data: { dataset: [mockTrack({ track_title: undefined, artist_name: undefined })] },
+          data: {
+            data: [mockTrack({ title: undefined, user: undefined })],
+          },
         })
       );
 
@@ -122,12 +97,15 @@ describe("FMA Service", () => {
       mock.method(axios, "get", () =>
         Promise.resolve({
           data: {
-            dataset: [mockTrack({
-              album_title: undefined,
-              track_file: undefined,
-              track_duration: undefined,
-              license_title: undefined,
-            })],
+            data: [
+              mockTrack({
+                genre: undefined,
+                stream: undefined,
+                duration: undefined,
+                license: undefined,
+                artwork: undefined,
+              }),
+            ],
           },
         })
       );
@@ -137,15 +115,16 @@ describe("FMA Service", () => {
       assert.equal(result[0].previewUrl, null);
       assert.equal(result[0].duration, null);
       assert.equal(result[0].license, null);
+      assert.equal(result[0].albumImage, null);
     });
 
-    it("convierte track_duration a entero", async () => {
+    it("convierte duration a entero", async () => {
       mock.method(axios, "get", () =>
         Promise.resolve({
           data: {
-            dataset: [
-              mockTrack({ track_duration: "180" }),
-              mockTrack({ track_id: "t2", track_duration: "0" }),
+            data: [
+              mockTrack({ duration: "180" }),
+              mockTrack({ id: "t2", duration: "0" }),
             ],
           },
         })
@@ -205,7 +184,7 @@ describe("FMA Service", () => {
 
     it("calcula offset correcto segun page", async () => {
       mock.method(axios, "get", () =>
-        Promise.resolve({ data: { dataset: [] } })
+        Promise.resolve({ data: { data: [] } })
       );
 
       await searchFMA("pagination", 3, 10);
@@ -215,7 +194,7 @@ describe("FMA Service", () => {
 
     it("respeta limite de resultados", async () => {
       mock.method(axios, "get", () =>
-        Promise.resolve({ data: { dataset: [] } })
+        Promise.resolve({ data: { data: [] } })
       );
 
       await searchFMA("limited", 1, 5);

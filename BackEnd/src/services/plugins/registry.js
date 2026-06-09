@@ -6,53 +6,51 @@ export default class PluginRegistry {
   }
 
   /**
-   * Registra un plugin en el sistema.
-   *
-   * La disponibilidad se determina así:
-   * 1. Si el plugin define un método isAvailable(), se usa ese.
-   * 2. Si no, se verifica que todas las variables en requiredEnv
-   *    estén definidas y no sean valores placeholder (your_*).
+   * Almacena un plugin en el registro. NOTA: no evalúa disponibilidad
+   * hasta que se consulta, porque al momento del registro las variables
+   * de entorno pueden no haberse cargado aún (ver app.js → dotenv).
    */
   register(plugin) {
-    let available;
-
-    if (typeof plugin.isAvailable === 'function') {
-      available = plugin.isAvailable();
-    } else if (plugin.requiredEnv && plugin.requiredEnv.length > 0) {
-      available = plugin.requiredEnv.every(
-        (k) => process.env[k] && !process.env[k].startsWith('your_')
-      );
-    } else {
-      available = true;
-    }
-
-    this._plugins.set(plugin.name, available ? plugin : null);
-
-    if (available) {
-      logger.info(`Plugin registrado: ${plugin.name}`);
-    } else {
-      logger.warn(`Plugin deshabilitado: ${plugin.name} (faltan env vars o configuración inválida)`);
-    }
+    this._plugins.set(plugin.name, plugin);
+    logger.info(`Plugin registrado: ${plugin.name}`);
   }
 
   /**
-   * Retorna todos los plugins (disponibles y no disponibles)
-   * con su estado de disponibilidad.
+   * Determina si un plugin está disponible según sus requerimientos.
+   */
+  _isAvailable(plugin) {
+    if (typeof plugin.isAvailable === 'function') {
+      return plugin.isAvailable();
+    }
+    if (plugin.requiredEnv && plugin.requiredEnv.length > 0) {
+      return plugin.requiredEnv.every(
+        (k) => process.env[k] && !process.env[k].startsWith('your_')
+      );
+    }
+    return true;
+  }
+
+  /**
+   * Retorna todos los plugins registrados con su estado de disponibilidad.
    */
   getAll() {
     return [...this._plugins.entries()].map(([name, plugin]) => ({
       name,
-      configured: plugin != null,
+      configured: this._isAvailable(plugin),
       description: plugin?.description ?? '',
     }));
   }
 
+  /**
+   * Retorna solo los plugins que están disponibles en este momento.
+   */
   getAvailable() {
-    return [...this._plugins.values()].filter(Boolean);
+    return [...this._plugins.values()].filter((p) => this._isAvailable(p));
   }
 
   isAvailable(name) {
-    return this._plugins.get(name) != null;
+    const plugin = this._plugins.get(name);
+    return plugin ? this._isAvailable(plugin) : false;
   }
 
   /**

@@ -105,21 +105,26 @@ export default function Profile() {
                 <p className="profile-muted">No hay plugins disponibles.</p>
               ) : (
                 <div className="plugin-toggles">
-                  {plugins.map((p) => {
+                   {plugins.map((p) => {
                     const isEnabled = enabledPlugins.includes(p.name);
+                    const isFma = p.name === 'fma';
+                    const isDisabled = !p.configured;
                     return (
                       <label
                         key={p.name}
-                        className={`plugin-toggle ${!p.configured ? 'plugin-toggle-unavailable' : ''}`}
+                        className={`plugin-toggle ${isDisabled ? 'plugin-toggle-unavailable' : ''} ${isFma ? 'plugin-toggle-fma' : ''}`}
                       >
                         <input
                           type="checkbox"
-                          checked={isEnabled}
-                          disabled={!p.configured}
+                          checked={isFma || isEnabled}
+                          disabled={isFma || isDisabled}
                           onChange={() => togglePlugin(p.name)}
                         />
                         <span className="plugin-toggle-label">{p.description}</span>
-                        {!p.configured && (
+                        {isFma && (
+                          <span className="plugin-toggle-status">(siempre activo)</span>
+                        )}
+                        {!isFma && isDisabled && (
                           <span className="plugin-toggle-status">(no configurado)</span>
                         )}
                       </label>
