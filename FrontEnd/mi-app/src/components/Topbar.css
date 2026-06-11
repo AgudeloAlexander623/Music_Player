@@ -14,12 +14,30 @@
 }
 
 .logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.logo-brand {
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: var(--accent);
-  cursor: pointer;
-  white-space: nowrap;
+  background: linear-gradient(135deg, var(--accent), #e07a9e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-suffix {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .navigation {
@@ -110,4 +128,29 @@
 
 .topbar-logout:hover {
   background: rgba(248, 113, 113, 0.1);
+}
+
+@media (max-width: 800px) {
+  .topbar {
+    height: 52px;
+    padding: 0 14px;
+    gap: 10px;
+  }
+
+  .logo-brand {
+    font-size: 1rem;
+  }
+
+  .logo-suffix {
+    font-size: 0.72rem;
+  }
+
+  .navigation {
+    display: none;
+  }
+
+  .search {
+    min-height: 34px;
+    font-size: 0.82rem;
+  }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { PlayRegular, HeartRegular, AddCircleRegular } from '@fluentui/react-icons';
 import { useToast } from './Toast';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -79,6 +80,7 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
     if (filter === 'youtube') return item.source === 'youtube';
     if (filter === 'youtube_music') return item.source === 'youtube_music';
     if (filter === 'deezer') return item.source === 'deezer';
+    if (filter === 'internetarchive') return item.source === 'internetarchive';
     return true;
   });
 
@@ -105,6 +107,9 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
         </button>
         <button className="source-filter-btn" onClick={() => setFilter('deezer')} disabled={filter === 'deezer'}>
           Deezer
+        </button>
+        <button className="source-filter-btn" onClick={() => setFilter('internetarchive')} disabled={filter === 'internetarchive'}>
+          Internet Archive
         </button>
       </div>
 
@@ -151,10 +156,11 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
                   track.source === 'musicbrainz' ? 'Metadata only - sin audio' :
                   'Reproducir'
                 }
-              >▶️
+              >
+                <PlayRegular />
               </button>
               <button className="track-btn" onClick={() => onAddFavorite(track)} title="Agregar a favoritos">
-                ❤️
+                <HeartRegular />
               </button>
               <div className="track-playlist-dropdown">
                 <button
@@ -162,7 +168,7 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
                   onClick={() => handlePlaylistClick(track.id)}
                   title="Agregar a playlist"
                 >
-                  📋
+                  <AddCircleRegular />
                 </button>
                 {playlistMenuId === track.id && (
                   <div className="playlist-dropdown-menu" ref={menuRef}>

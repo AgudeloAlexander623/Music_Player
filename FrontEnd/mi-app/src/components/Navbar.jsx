@@ -4,9 +4,9 @@ import './Navbar.css';
 
 const links = [
   { to: '/', label: '🎵 Inicio' },
-  { to: '/favorites', label: '⭐ Favoritos' },
-  { to: '/playlists', label: '📋 Playlists' },
-  { to: '/profile', label: '👤 Perfil' },
+  { to: '/favorites', label: 'Favoritos' },
+  { to: '/playlists', label: 'Playlists' },
+  { to: '/profile', label: 'Perfil' },
 ];
 
 export default function Navbar() {
@@ -15,7 +15,10 @@ export default function Navbar() {
 
   return (
     <nav className="navbar">
-      <Link to="/" className="navbar-brand">Reproductor</Link>
+      <Link to="/" className="navbar-brand">
+        <span className="brand-name">SoundWave</span>
+        <span className="brand-suffix">Music</span>
+      </Link>
 
       <div className="navbar-links">
         {links.map(({ to, label }) => (
@@ -31,7 +34,7 @@ export default function Navbar() {
         {user && (
           <>
             <span className="navbar-user">
-              {isGuest ? '👤 Invitado' : user.email}
+              {isGuest ? 'Invitado' : user.email}
             </span>
             <button className="navbar-logout" onClick={logout}>
               {isGuest ? 'Salir' : 'Cerrar sesión'}

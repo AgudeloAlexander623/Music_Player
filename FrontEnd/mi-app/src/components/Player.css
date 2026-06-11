@@ -225,11 +225,45 @@
   color: var(--text);
 }
 
+@media (max-width: 800px) {
+  .player {
+    padding: 8px 14px;
+    gap: 10px;
+  }
+
+  .track-cover {
+    width: 36px;
+    height: 36px;
+  }
+
+  .track-text h4 {
+    font-size: 0.8rem;
+  }
+
+  .track-text span {
+    font-size: 0.72rem;
+  }
+
+  .player-controls button {
+    width: 28px;
+    height: 28px;
+  }
+
+  .play-btn-main {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .volume-slider {
+    width: 60px;
+  }
+}
+
 @media (max-width: 768px) {
   .player {
     flex-wrap: wrap;
-    padding: 10px 12px;
-    gap: 10px;
+    padding: 8px 10px;
+    gap: 8px;
   }
 
   .track-info {

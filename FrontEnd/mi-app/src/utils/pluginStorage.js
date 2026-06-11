@@ -2,7 +2,7 @@ const PLUGINS_STORAGE_KEY = 'reproductor_plugins_enabled';
 
 const DEFAULT_EXCLUDED = ['musicbrainz'];
 
-const ALWAYS_ENABLED = ['fma'];
+const ALWAYS_ENABLED = ['fma', 'internetarchive'];
 
 export function getEnabledPlugins(availablePlugins) {
   try {

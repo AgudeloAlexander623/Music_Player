@@ -17,3 +17,29 @@ router.get('/', (_req, res) => {
 });
 
 export default router;
+
+
+
+router.post('/activate', (req, res) => {
+  const {pluginName} = req.body;
+  const plugin = pluginRegistry.get(pluginName);
+  if ( plugin ) {
+    plugin.active = () => true;
+    res.json({ success: true, message: `Pligin ${ pluginName} activado`});
+    }else {
+      res.status(404).json({ success: false, message: `Plugin ${ pluginName} no encontrado`});
+    };
+
+});
+
+
+router.post('/deactivate', (req, res) => {  const {pluginName} = req.body;
+  const plugin = pluginRegistry.get(pluginName);
+  if ( plugin ) {
+    plugin.active = () => false;
+    res.json({ success: true, message: `Pligin ${ pluginName} desactivado`});
+    }else {
+      res.status(404).json({ success: false, message: `Plugin ${ pluginName} no encontrado`});
+    };
+
+});

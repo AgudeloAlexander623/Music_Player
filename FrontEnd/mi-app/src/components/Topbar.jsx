@@ -14,7 +14,8 @@ export default function Topbar({ searchQuery, onSearchChange, onSearchSubmit }) 
   return (
     <header className="topbar">
       <div className="logo" onClick={() => navigate('/')}>
-        Reproductor
+        <span className="logo-brand">SoundWave</span>
+        <span className="logo-suffix">Music</span>
       </div>
 
       <div className="navigation">

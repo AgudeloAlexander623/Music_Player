@@ -59,7 +59,7 @@ export default function Favorites() {
 
   return (
     <>
-      <h1>⭐ Favorites</h1>
+      <h1>Favorites</h1>
 
       <div className="tab-bar">
         {tabs.map((t) => (
@@ -96,9 +96,9 @@ export default function Favorites() {
             </div>
             <div className="favorite-actions">
               {fav.preview_url && (
-                <button className="action-btn" onClick={() => handlePlay(fav)}>▶️</button>
+                <button className="action-btn" onClick={() => handlePlay(fav)}>▶</button>
               )}
-              <button className="action-btn" onClick={() => handleRemoveFavorite(fav.id)}>🗑️</button>
+              <button className="action-btn" onClick={() => handleRemoveFavorite(fav.id)}>&#xF78A;</button>
             </div>
           </div>
         ))}

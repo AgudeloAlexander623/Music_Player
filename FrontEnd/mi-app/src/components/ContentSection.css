@@ -162,9 +162,42 @@
   white-space: nowrap;
 }
 
+@media (max-width: 800px) {
+  .content-section {
+    margin-bottom: 24px;
+  }
+
+  .section-header {
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: 1rem;
+  }
+
+  .playlist-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+  }
+
+  .card-name {
+    font-size: 0.8rem;
+  }
+
+  .card-subtitle {
+    font-size: 0.72rem;
+  }
+}
+
 @media (max-width: 768px) {
   .playlist-grid {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+  }
+
+  .card-play-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
   }
 }

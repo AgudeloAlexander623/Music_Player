@@ -25,6 +25,27 @@
   .container .playlist-panel {
     display: none;
   }
+
+  .container .sidebar {
+    width: 180px;
+  }
+}
+
+@media (max-width: 800px) {
+  .container {
+    min-height: calc(100vh - 52px);
+    margin-top: 52px;
+    padding-bottom: 60px;
+  }
+
+  .content {
+    padding: 12px 14px;
+  }
+
+  .content h1 {
+    font-size: 1.3rem;
+    margin-bottom: 12px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -33,6 +54,6 @@
   }
 
   .content {
-    padding: 16px;
+    padding: 12px;
   }
 }

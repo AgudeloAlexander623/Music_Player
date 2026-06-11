@@ -32,24 +32,6 @@ export default function Dashboard() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!allDisabled) {
-      fetchDashboardData();
-    } else {
-      setLoading(false);
-    }
-  }, [allDisabled]);
-
-  useEffect(() => {
-    if (allDisabled) return;
-    if (searchQuery.length >= 2) {
-      handleSearch();
-    } else if (searchQuery.length === 0) {
-      setSearched(false);
-      setSearchResults([]);
-    }
-  }, [searchQuery, allDisabled]);
-
   const buildSearchUrl = (query, limit = 20) => {
     let url = `/search?q=${encodeURIComponent(query.trim())}&limit=${limit}`;
     if (sourcesParam) url += `&sources=${sourcesParam}`;
@@ -102,7 +84,8 @@ export default function Dashboard() {
         });
       }
       setTopAlbums(uniqueAlbums.slice(0, 10));
-    } catch (error) {
+    } catch (err) {
+      console.error('Error cargando dashboard:', err);
       toast.error('Error cargando datos del dashboard');
     } finally {
       setLoading(false);
@@ -116,12 +99,32 @@ export default function Dashboard() {
     try {
       const res = await api.get(buildSearchUrl(searchQuery.trim()));
       setSearchResults(res.data.tracks || []);
-    } catch {
+    } catch (err) {
+      console.error('Error en búsqueda:', err);
       toast.error('Error en la búsqueda');
+      setSearchResults([]);
     } finally {
       setSearching(false);
     }
   };
+
+  useEffect(() => {
+    if (!allDisabled) {
+      fetchDashboardData();
+    } else {
+      setLoading(false);
+    }
+  }, [allDisabled, sourcesParam]);
+
+  useEffect(() => {
+    if (allDisabled) return;
+    if (searchQuery.length >= 2) {
+      handleSearch();
+    } else if (searchQuery.length === 0) {
+      setSearched(false);
+      setSearchResults([]);
+    }
+  }, [searchQuery, allDisabled, handleSearch]);
 
   const handlePlaySearchResult = (track) => {
     playTrack(track, searchResults);

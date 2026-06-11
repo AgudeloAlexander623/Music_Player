@@ -32,11 +32,14 @@ export function mergeResults(sources = {}) {
     deezer = [],
     fma = [],
     youtube = [],
+    youtube_music = [],
     youtubeMusic = [],
     internetarchive = [],
     spotify = [],
     musicbrainz = [],
   } = sources;
+
+  const mergedYouTubeMusic = youtube_music.length > 0 ? youtube_music : youtubeMusic;
 
   /* ── Fuentes con audio reproducible ── */
 
@@ -54,7 +57,7 @@ export function mergeResults(sources = {}) {
     addIfNotDuplicate(yt);
   });
 
-  youtubeMusic.forEach((ytm) => {
+  mergedYouTubeMusic.forEach((ytm) => {
     if (ytm.videoId) {
       if (seenYouTubeIds.has(ytm.videoId)) return;
       seenYouTubeIds.add(ytm.videoId);

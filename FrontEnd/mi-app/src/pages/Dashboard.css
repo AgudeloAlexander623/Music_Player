@@ -112,3 +112,25 @@
   color: var(--accent-light);
   text-decoration: underline;
 }
+
+@media (max-width: 800px) {
+  .playlist-header {
+    margin-bottom: 12px;
+  }
+
+  .playlist-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .search-results-header {
+    margin-bottom: 12px;
+  }
+
+  .search-results-header h2 {
+    font-size: 0.95rem;
+  }
+
+  .dashboard-loading {
+    min-height: 40vh;
+  }
+}
