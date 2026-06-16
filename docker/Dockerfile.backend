@@ -1,19 +1,46 @@
+# ===========================================
+#  REPRODUCTOR — BACKEND (Node.js / Express)
+# ===========================================
+#  Dos modos de construcción:
+#    • production  → npm ci --omit=dev (solo dependencias runtime)
+#    • development → npm ci (incluye devDeps: nodemon, etc.)
+#
+#  Elige el modo con --build-arg NODE_ENV=development
+#  (por defecto es production).
+#
+#  Las variables de entorno (DB_HOST, JWT_SECRET, etc.) se
+#  inyectan desde el docker-compose, no desde .env (que está
+#  en .dockerignore a propósito).
+# ===========================================
+
 FROM node:20-alpine AS base
 
 WORKDIR /app
 
-COPY package*.json ./
-
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
 
+# 1. Copiar solo los package.json primero para cachear
+#    la instalación de dependencias (capas de Docker).
+COPY package*.json ./
+
+# 2. Instalar según el entorno.  --omit=dev reemplaza al
+#    viejo --only=production (deprecado en npm 9+).
 RUN if [ "$NODE_ENV" = "production" ]; then \
-      npm ci --only=production && npm cache clean --force; \
+      npm ci --omit=dev && npm cache clean --force; \
     else \
       npm ci && npm cache clean --force; \
     fi
 
+# 3. Copiar el resto del código fuente.
+#    Ojo: .dockerignore excluye node_modules, .env, etc.
 COPY . .
+
+# 4. Pre-crear el directorio de logs para que el usuario
+#    node (no-root) pueda escribir ahí en producción.
+#    Winston intenta crear logs/ al arrancar y falla si
+#    el directorio no existe y el usuario no es root.
+RUN mkdir -p /app/logs && chown -R node:node /app/logs
 
 EXPOSE 4000
 

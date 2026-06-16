@@ -49,4 +49,4 @@ const logsToken = async (res, req, next) => {
     console.log(`[${new Date().toISOString()}] User ${userId} accessed ${req.method} ${req.originalUrl} with body:`, req.body);
 
     return;
-} 
+}

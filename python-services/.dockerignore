@@ -1,6 +1,14 @@
+# ===========================================
+#  .dockerignore — PYTHON SERVICES
+# ===========================================
+#  Excluimos entornos virtuales, caches de Python,
+#  y otros servicios que no necesita la imagen.
+# ===========================================
+
 __pycache__
 *.pyc
 *.pyo
+.pytest_cache
 .venv
 venv
 .env

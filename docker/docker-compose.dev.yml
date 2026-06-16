@@ -1,4 +1,20 @@
-version: "3.9"
+# ====================================================================
+#  REPRODUCTOR DE MÚSICA — DESARROLLO
+# ====================================================================
+#  Versus la versión de producción (docker-compose.yml), acá:
+#    • Los servicios montan el código fuente como volúmenes
+#      para que los cambios se reflejen al instante.
+#    • backend y frontend corren con nodemon / vite --host
+#      (hot-reload automático).
+#    • El .env de la raíz se monta dentro del backend para
+#      que dotenv lo pueda leer (el bind mount de BackEnd/ en
+#      /app rompe la resolución relativa de ../../.env).
+#    • python-service usa uvicorn --reload.
+#
+#  USO:
+#    docker compose -f docker/docker-compose.dev.yml up -d --build
+#    docker compose -f docker/docker-compose.dev.yml down
+# ====================================================================
 
 services:
   postgres:
@@ -45,12 +61,21 @@ services:
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - FMA_API_KEY=${FMA_API_KEY}
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_key_reproductor_2026}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - MUSICBRAINZ_ENABLED=${MUSICBRAINZ_ENABLED:-true}
+      - DB_PORT=5432
       - PYTHON_SERVICE_URL=http://python-service:8000
     ports:
       - "${BACKEND_PORT:-4000}:4000"
     volumes:
+      # Montamos el código fuente para hot-reload
       - ../BackEnd:/app
+      # El backend busca el .env en ../../.env desde src/.
+      # Como /app/src/../../.env = /app/.env y /app = BackEnd/,
+      # necesitamos dejar el .env al alcance.
+      - ../.env:/app/.env
+      # No sobreescribir node_modules del contenedor con el del host
       - /app/node_modules
     command: npm run dev
     networks:
@@ -65,7 +90,9 @@ services:
     depends_on:
       - backend
     environment:
-      - VITE_API_URL=http://backend:4000/api
+      # En desarrollo el frontend corre en :5173 y el backend en :4000.
+      # El navegador necesita una URL absoluta para llegar al backend.
+      - VITE_API_URL=http://localhost:4000
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     volumes:

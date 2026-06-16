@@ -1,0 +1,33 @@
+# ===========================================
+#  .dockerignore RAÍZ
+# ===========================================
+#  El Dockerfile.frontend usa la raíz como build
+#  context (necesita FrontEnd/mi-app/ y docker/).
+#  Sin este archivo, Docker empaqueta T O D O
+#  el repositorio (>200 MB) en el contexto, lo que
+#  ralentiza el build y contamina la caché.
+# ===========================================
+
+# --- Siempre ignorar ---
+.git
+.gitignore
+*.md
+node_modules
+.env.local
+dist
+__pycache__
+*.pyc
+.venv
+venv
+.pytest_cache
+.python-version
+
+# --- Servicios ajenos al frontend ---
+BackEnd
+python-services
+diagrams
+docks
+
+# --- Docs de docker que sobran en el build ---
+docker/README.md
+docker/.env.example

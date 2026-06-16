@@ -1,11 +1,20 @@
+# ===========================================
+#  REPRODUCTOR — PYTHON SERVICES (FastAPI)
+# ===========================================
+#  Microservicio de recomendaciones musicales.
+#  Usa FastAPI + uvicorn.  En desarrollo se monta
+#  el código como volumen y se pasa --reload.
+# ===========================================
+
 FROM python:3.12-slim AS base
 
 WORKDIR /app
 
+# Primero las dependencias (aprovecha la caché de capas)
 COPY requirements.txt .
-
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Luego el código fuente
 COPY . .
 
 EXPOSE 8000

@@ -1,21 +1,42 @@
-version: "3.9"
+# ====================================================================
+#  REPRODUCTOR DE MÚSICA — PRODUCCIÓN
+# ====================================================================
+#  La idea es simple: cuatro servicios que se hablan entre sí a través
+#  de una red interna.  Postgres guarda los datos, el backend sirve la
+#  API, el servicio Python recomienda canciones, y nginx se encarga de
+#  servir el frontend y pasar las llamadas /api/* al backend.
+#
+#  USO:
+#    docker compose -f docker/docker-compose.yml up -d --build
+#    docker compose -f docker/docker-compose.yml down
+#
+#  Para desarrollo usa docker-compose.dev.yml (tiene hot-reload).
+# ====================================================================
 
 services:
+  # -------------------------------------------------------
+  #  postgres — La base de datos del proyecto
+  # -------------------------------------------------------
+  #  Expone el puerto 5432 hacia el host en el puerto que
+  #  definas en DB_PORT (por defecto 5432).  El SQL de
+  #  arranque (DataBases.sql) se monta como init script
+  #  para que las tablas existan desde el primer momento.
+  # -------------------------------------------------------
   postgres:
     image: postgres:16
     container_name: reproductor-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-reproductor_db}
+      POSTGRES_USER: ${DB_USER:-reproductor_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-reproductor_pass}
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ../BackEnd/src/db/DataBases.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-reproductor_user} -d ${DB_NAME:-reproductor_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,6 +44,19 @@ services:
     networks:
       - reproductor-network
 
+  # -------------------------------------------------------
+  #  backend — API Rest con Express
+  # -------------------------------------------------------
+  #  Expone rutas como /api/search, /api/plugins, /api/auth.
+  #  Conecta a postgres a través del nombre del servicio
+  #  (no necesita IP fija).  Los plugins de YouTube, Deezer,
+  #  etc. se configuran vía variables de entorno.
+  #
+  #  Las variables que empiezan con ${SIN_FALLBACK} se leen
+  #  del .env o del entorno del host.  Si no están definidas
+  #  el backend igual arranca pero ciertos servicios quedan
+  #  deshabilitados (con un warning en los logs).
+  # -------------------------------------------------------
   backend:
     build:
       context: ../BackEnd
@@ -36,20 +70,20 @@ services:
       - NODE_ENV=production
       - PORT=4000
       - DB_HOST=postgres
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER:-reproductor_user}
+      - DB_PASSWORD=${DB_PASSWORD:-reproductor_pass}
+      - DB_NAME=${DB_NAME:-reproductor_db}
       - DB_POOL_LIMIT=10
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - FMA_API_KEY=${FMA_API_KEY}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_key_reproductor_2026}
       - PYTHON_SERVICE_URL=http://python-service:8000
     expose:
       - "4000"
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/api/health', (r) => { let d=''; r.on('data',c=>d+=c); r.on('end',()=>process.exit(JSON.parse(d).status==='ok'?0:1)) })"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -57,6 +91,13 @@ services:
     networks:
       - reproductor-network
 
+  # -------------------------------------------------------
+  #  python-service — Motor de recomendaciones
+  # -------------------------------------------------------
+  #  Servicio FastAPI que genera recomendaciones basadas en
+  #  el catálogo interno.  El backend lo llama cuando el
+  #  usuario pide sugerencias.  Tiene su propio healthcheck.
+  # -------------------------------------------------------
   python-service:
     build:
       context: ../python-services
@@ -74,12 +115,26 @@ services:
     networks:
       - reproductor-network
 
+  # -------------------------------------------------------
+  #  frontend — SPA servida por nginx
+  # -------------------------------------------------------
+  #  El frontend se construye en una etapa multi-stage
+  #  (build con Node, runtime con nginx).  nginx también
+  #  hace de proxy reverso: cualquier llamada a /api/* se
+  #  redirige al backend.  Así el frontend y la API
+  #  comparten el mismo dominio y no hay problemas de CORS.
+  #
+  #  VITE_API_URL va vacío por defecto para que el frontend
+  #  use rutas relativas (/api/*) y todo pase por nginx.
+  #  Si necesitas apuntar directo al backend (ej: desarrollo
+  #  sin nginx) pásalo como http://localhost:4000.
+  # -------------------------------------------------------
   frontend:
     build:
       context: ..
       dockerfile: docker/Dockerfile.frontend
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
+        VITE_API_URL: ${VITE_API_URL:-}
     container_name: reproductor-frontend
     restart: unless-stopped
     depends_on:

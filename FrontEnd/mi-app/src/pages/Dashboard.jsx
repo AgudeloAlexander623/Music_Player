@@ -16,7 +16,9 @@ export default function Dashboard() {
   const [topAlbums, setTopAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
+
+  const [Searching, setSearching] = useState(false);
+  
   const [searched, setSearched] = useState(false);
   const [playlistFilter, setPlaylistFilter] = useState('');
   const [artistFilter, setArtistFilter] = useState('');
@@ -24,6 +26,7 @@ export default function Dashboard() {
   const [selectedGenre, setSelectedGenre] = useState('All');
   const toast = useToast();
   const { isGuest } = useAuth();
+
   const { allDisabled, sourcesParam } = useMemo(() => {
     const stored = getAllEnabled();
     return {
@@ -92,21 +95,44 @@ export default function Dashboard() {
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim() || searchQuery.trim().length < 2) return;
-    setSearching(true);
-    setSearched(true);
-    try {
-      const res = await api.get(buildSearchUrl(searchQuery.trim()));
-      setSearchResults(res.data.tracks || []);
-    } catch (err) {
-      console.error('Error en búsqueda:', err);
-      toast.error('Error en la búsqueda');
-      setSearchResults([]);
-    } finally {
-      setSearching(false);
+ const handleSearch = async () => {
+  const trimmedQuery = searchQuery.trim();
+  
+  // Validación única
+  if (!trimmedQuery || trimmedQuery.length < 2) return;
+
+  setSearching(true);
+  setSearchResults([]); // Limpiar resultados previos
+  
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+  
+  try {
+    const res = await api.get(buildSearchUrl(trimmedQuery), {
+      signal: controller.signal,
+    });
+    setSearchResults(res.data.tracks || []);
+    setSearched(true); // Solo si es exitoso
+  } catch (err) {
+    setSearchResults([]);
+    setSearched(false); // Reset si falla
+    
+    // Manejo granular de errores
+    if (err.name === 'AbortError') {
+      toast.error('La búsqueda tardó demasiado');
+    } else if (err.response?.status === 404) {
+      toast.error('No se encontraron resultados');
+    } else if (err.response?.status >= 500) {
+      toast.error('Error del servidor. Intenta más tarde');
+    } else {
+      toast.error('Error en la búsqueda. Verifica tu conexión');
     }
-  };
+    console.error('Error en búsqueda:', err);
+  } finally {
+    setSearching(false);
+    clearTimeout(timeoutId);
+  }
+};
 
   useEffect(() => {
     if (!allDisabled) {

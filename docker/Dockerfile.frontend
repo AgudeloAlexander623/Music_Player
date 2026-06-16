@@ -1,3 +1,15 @@
+# ===========================================
+#  REPRODUCTOR — FRONTEND (React + Vite)
+# ===========================================
+#  Multi-stage build:
+#    1. build  → compila la SPA con Vite
+#    2. production → sirve los archivos estáticos con nginx
+#
+#  El build context es la raíz del proyecto (para poder
+#  copiar tanto FrontEnd/mi-app/ como docker/nginx.conf).
+# ===========================================
+
+# ---------- Etapa 1: compilación ----------
 FROM node:20-alpine AS build
 
 WORKDIR /app
@@ -8,14 +20,18 @@ RUN npm ci && npm cache clean --force
 
 COPY FrontEnd/mi-app/ .
 
-ARG VITE_API_URL=http://localhost:4000/api
+ARG VITE_API_URL=
 ENV VITE_API_URL=${VITE_API_URL}
 
 RUN npm run build
 
+# ---------- Etapa 2: servidor nginx ----------
 FROM nginx:alpine AS production
 
+# Los archivos compilados van al directorio que nginx sirve por defecto
 COPY --from=build /app/dist /usr/share/nginx/html
+
+# Configuración de nginx (proxy reverso para /api/*)
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
