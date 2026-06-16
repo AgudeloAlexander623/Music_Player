@@ -479,6 +479,7 @@ Usuario                          Frontend
   │  Click "Crear"                 │
   │──────────────────────────────►│
   │                                │
+
   │                                │  POST /api/playlists
   │                                │  { name, description }
   │                                │──────────────────────► Backend

@@ -25,8 +25,7 @@ const logsToken = async (res, req, next) => {
     }
 
     if (next) next();
-    
-    // 
+
     for (let key in req.body){
         if (typeof req.body[key] === 'string' && req.body[key].length > 100 ) {
             req.body[key] = '[DATA REDACTED]';
