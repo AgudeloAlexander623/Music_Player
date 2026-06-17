@@ -1,0 +1,250 @@
+================================================================================
+DIAGRAMA DE SECUENCIA - Arquitectura General del Sistema
+================================================================================
+Materia: Ingenieria de Software
+Estudiante: [Nombre]
+================================================================================
+
+NOTA: Este diagrama muestra el flujo completo de una solicitud desde que el
+      usuario hace clic hasta que recibe una respuesta, pasando por todas
+      las capas del sistema. Es un panorama GENERAL de como interactuan
+      los componentes.
+
+================================================================================
+FLUJO GENERAL: Usuario hace una busqueda
+================================================================================
+
+[Usuario]   [React App]   [Router]   [Pagina]   [api.js]   [Express]   [Middleware]   [Controller]   [Service]   [DB/API]
+    |            |           |           |          |          |             |              |              |           |
+    | 1. Abre    |           |           |          |          |             |              |              |           |
+    | la app     |           |           |          |          |             |              |              |           |
+    |----------->|           |           |          |          |             |              |              |           |
+    |            |           |           |          |          |             |              |              |           |
+    |            | 2. main.jsx carga App.jsx        |          |             |              |              |           |
+    |            | (BrowserRouter + AuthProvider)   |          |             |              |              |           |
+    |            |                                           |             |              |              |           |
+    |            | 3. AuthContext.verifySession()             |             |              |              |           |
+    |            | (revisa si hay token en localStorage)     |             |              |              |           |
+    |            |    |                                      |             |              |              |           |
+    |            |    |-- ¿Token? -> POST /auth/verify-------|------------>|------------->|------------->|           |
+    |            |    |                                      |             |              |              |           |
+    |            |    |-- ¿No token? -> setUser(null)       |             |              |              |           |
+    |            |    |-- ¿Guest? -> setUser({guest:true})  |             |              |              |           |
+    |            |                                           |             |              |              |           |
+    |            | 4. Se renderiza:                          |             |              |              |           |
+    |            | - <Topbar />   (barra de busqueda)        |             |              |              |           |
+    |            | - <Sidebar />  (navegacion)               |             |              |              |           |
+    |            | - <Outlet />   (pagina activa)            |             |              |              |           |
+    |            |                                           |             |              |              |           |
+    |<-----------|                                           |             |              |              |           |
+    |            |                                           |             |              |              |           |
+    | 5. Escribe |                                           |             |              |              |           |
+    | "queen" en |                                           |             |              |              |           |
+    | el buscador|                                           |             |              |              |           |
+    |----------->|                                           |             |              |              |           |
+    |            |                                           |             |              |              |           |
+    |            | 6. Dashboard.jsx                          |             |              |              |           |
+    |            | handleSearch() construye URL              |             |              |              |           |
+    |            | con AbortController (timeout 10s)         |             |              |              |           |
+    |            |                                           |             |              |              |           |
+    |            | 7. GET /api/search?q=queen&page=1&limit=10             |              |              |           |
+    |            |------------------------------------------>|             |              |              |           |
+    |            |                                           |             |              |              |           |
+    |            |                                           | 8. Express  |              |              |           |
+    |            |                                           | app.js      |              |              |           |
+    |            |                                           | recibe req  |              |              |           |
+    |            |                                           |             |              |              |           |
+    |            |                                           | 9. CORS     |              |              |           |
+    |            |                                           | middleware   |              |              |           |
+    |            |                                           | (permite    |              |              |           |
+    |            |                                           |  Frontend)  |              |              |           |
+    |            |                                           |             |              |              |           |
+    |            |                                           | 10. JSON    |              |              |           |
+    |            |                                           | body parser |              |              |           |
+    |            |                                           |             |              |              |           |
+    |            |                                           | 11. Rate    |              |              |           |
+    |            |                                           | limiter     |              |              |           |
+    |            |                                           | (30 req/min)|              |              |           |
+    |            |                                           |             |              |              |           |
+    |            |                                           | 12. Router  |              |              |           |
+    |            |                                           | /api/search |              |              |           |
+    |            |                                           |------------>|              |              |           |
+    |            |                                           |             |              |              |           |
+    |            |                                           |             | 13. verify   |              |           |
+    |            |                                           |             | Token (si    |              |           |
+    |            |                                           |             | hay Bearer)  |              |           |
+    |            |                                           |             |              |              |           |
+    |            |                                           |             | 14. search   |              |           |
+    |            |                                           |             | Controller   |              |           |
+    |            |                                           |             |------------->|              |           |
+    |            |                                           |             |              |              |           |
+    |            |                                           |             |              | 15. Llamar   |           |
+    |            |                                           |             |              | servicios:   |           |
+    |            |                                           |             |              | - Deezer     |---------->|
+    |            |                                           |             |              | - YouTube    |---------->|
+    |            |                                           |             |              | - FMA        |---------->|
+    |            |                                           |             |              | - MusicBrainz|---------->|
+    |            |                                           |             |              | - IA         |---------->|
+    |            |                                           |             |              |              |           |
+    |            |                                           |             |              | 16. mergeResults()     |
+    |            |                                           |             |              | (dedup + orden)        |
+    |            |                                           |             |              |              |           |
+    |            |                                           |             |              | 17. Si user  |           |
+    |            |                                           |             |              | autenticado: |           |
+    |            |                                           |             |              | INSERT       |---------->|
+    |            |                                           |             |              | search_history          |
+    |            |                                           |             |              |              |           |
+    |            |                                           |             | 18. JSON     |              |           |
+    |            |                                           |             | Response     |              |           |
+    |            |                                           |<------------|--------------|              |           |
+    |            |                                           |             |              |              |           |
+    |            | 19. 200 OK { tracks: [...], count: N }    |             |              |              |           |
+    |            |<------------------------------------------|             |              |              |           |
+    |            |                                           |             |              |              |           |
+    |            | 20. Dashboard.renderiza                   |             |              |              |           |
+    |            | <SearchResults />                          |             |              |              |           |
+    |            |                                           |             |              |              |           |
+    | 21. Ve las|                                           |             |              |              |           |
+    | tarjetas  |                                           |             |              |              |           |
+    |<-----------|                                           |             |              |              |           |
+    |            |                                           |             |              |              |           |
+
+
+================================================================================
+FLUJO DE AUTENTICACION Y AUTORIZACION
+================================================================================
+
+[Frontend Component]   [api.js Interceptor]   [Express]   [verifyTokenMW]   [requireRealUser]   [Controller]
+    |                        |                    |             |                 |                 |
+    | 1. Cualquier request   |                    |             |                 |                 |
+    | que requiera auth      |                    |             |                 |                 |
+    |----------------------->|                    |             |                 |                 |
+    |                        |                    |             |                 |                 |
+    |                        | 2. Interceptor     |             |                 |                 |
+    |                        | request:           |             |                 |                 |
+    |                        | Si hay token en    |             |                 |                 |
+    |                        | localStorage       |             |                 |                 |
+    |                        | -> header:         |             |                 |                 |
+    |                        | Authorization:     |             |                 |                 |
+    |                        |   Bearer <token>   |             |                 |                 |
+    |                        |                    |             |                 |                 |
+    |                        | 3. Request con     |             |                 |                 |
+    |                        | header Auth        |             |                 |                 |
+    |                        |------------------->|             |                 |                 |
+    |                        |                    |             |                 |                 |
+    |                        |                    | 4. verifyToken            |                 |
+    |                        |                    |------------>|                 |                 |
+    |                        |                    |             |                 |                 |
+    |                        |                    |             | 5. jwt.verify() |                 |
+    |                        |                    |             | - Valido:       |                 |
+    |                        |                    |             |   req.user =    |                 |
+    |                        |                    |             |   decoded       |                 |
+    |                        |                    |             | - Expirado: 401 |                 |
+    |                        |                    |             | - Invalido: 401 |                 |
+    |                        |                    |             |                 |                 |
+    |                        |                    |             | 6. next()       |                 |
+    |                        |                    |<------------|                 |                 |
+    |                        |                    |             |                 |                 |
+    |                        |                    | 7. requireRealUser (si aplica)              |
+    |                        |                    |------------|--------------->|                 |
+    |                        |                    |             |                 |                 |
+    |                        |                    |             | 8. req.user.guest?              |
+    |                        |                    |             | - Si -> 403     |                 |
+    |                        |                    |             | - No -> next()  |                 |
+    |                        |                    |<------------|---------------|                 |
+    |                        |                    |             |                 |                 |
+    |                        |                    | 9. Controller ejecuta logica              |
+    |                        |                    |------------|---------------|--------------->|
+    |                        |                    |             |                 |                 |
+    |                        | 10. Respuesta     |             |                 |                 |
+    |                        |<-------------------|             |                 |                 |
+    |                        |                    |             |                 |                 |
+    |                        | 11. Interceptor    |             |                 |                 |
+    |                        | response:          |             |                 |                 |
+    |                        | Si 401 ->          |             |                 |                 |
+    |                        | Borra localStorage |             |                 |                 |
+    |                        | Redirige a /login  |             |                 |                 |
+    |<-----------------------|                    |             |                 |                 |
+    |                        |                    |             |                 |                 |
+
+
+================================================================================
+DIAGRAMA DE CAPAS (LAYERS)
+================================================================================
+
+   CAPA 1: PRESENTACION (Frontend)
+   +-----------------------------------------------------------------+
+   | React 19 + Vite                                                 |
+   | - Pages: Login, Dashboard, Favorites, Playlists, Profile        |
+   | - Components: Topbar, Sidebar, Player, SearchResults            |
+   | - Context: AuthContext (estado global de usuario)               |
+   | - Services: api.js (Axios con interceptors)                     |
+   +-----------------------------------------------------------------+
+            |  HTTP/JSON (localhost:4000/api)
+            ▼
+   CAPA 2: API GATEWAY (Backend)
+   +-----------------------------------------------------------------+
+   | Express 5                                                       |
+   | - CORS middleware                                               |
+   | - JSON body parser                                              |
+   | - Rate limiters (por ruta)                                      |
+   | - Routers (auth, search, favorites, playlists, recommendations) |
+   +-----------------------------------------------------------------+
+            |
+            ▼
+   CAPA 3: LOGICA DE NEGOCIO
+   +-----------------------------------------------------------------+
+   | Middleware: verifyToken, requireRealUser                        |
+   | Controllers: Auth, Search, Favorites, Playlists, Recommendations|
+   | Services: auth, python, mergeResults                            |
+   | Utils: logger, validateEnv                                      |
+   +-----------------------------------------------------------------+
+            |
+            ├--------------------------┐
+            ▼                          ▼
+   CAPA 4A: DATOS             CAPA 4B: EXTERNAL
+   +-------------------+     +-------------------------+
+   | PostgreSQL        |     | Deezer API              |
+   | - users           |     | YouTube API             |
+   | - favorite_tracks |     | MusicBrainz API         |
+   | - playlists       |     | FMA API                 |
+   | - playlist_tracks |     | Internet Archive API    |
+   | - search_history  |     | Python FastAPI (recom)  |
+   +-------------------+     +-------------------------+
+
+
+================================================================================
+RESUMEN DE FLUJO DE DATOS
+================================================================================
+
+   Usuario
+      ↓ (click, input)
+   Componente React (Pagina)
+      ↓ (llamada a api.js)
+   Interceptor api.js
+      ↓ (adjunta JWT si existe)
+   HTTP Request (JSON)
+      ↓
+   Express app.js
+      ↓ (CORS → JSON parse → Rate Limit → Router)
+   Ruta específica
+      ↓ (middleware si aplica: verifyToken → requireRealUser)
+   Controller
+      ↓ (orquesta: valida → llama servicios → responde)
+   Service / External API
+      ↓
+   Database / API Response
+      ↑ (camino inverso con JSON)
+   Controller responde
+      ↑
+   api.js recibe respuesta
+      ↑ (interceptor: si 401 → logout)
+   Componente actualiza estado
+      ↑ (setState / context)
+   React re-renderiza UI
+      ↑
+   Usuario ve el resultado
+
+================================================================================
+FIN - Diagrama de secuencia General del Sistema
+================================================================================

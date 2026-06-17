@@ -83,7 +83,7 @@ export async function searchMusicBrainz(query, limit = 10) {
           limit: searchLimit,
         },
         headers: {
-          "User-Agent": "Reproductor-App/1.0 (alexander@example.com)",
+          "User-Agent": "SoundWave-Music/1.0 (alexander@example.com)",
         },
         timeout: TIMEOUT_MS,
       });

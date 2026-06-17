@@ -1,0 +1,51 @@
+Genera el codigo XML de Draw.io para un diagrama de secuencia UML, basado EXCLUSIVAMENTE en el siguiente contenido. No inventes pasos ni interacciones.
+
+IMPORTANTE: El XML debe poder pegarse directo en Draw.io (Archivo > Importar). El diagrama debe verse HUMANO, como lo dibujaria un estudiante junior: colores planos, lineas no perfectamente rectas, textos simples sin tanto formato. Nada de looks profesionales ni sofisticados.
+
+Usa el estilo clasico de diagrama de secuencia:
+- Lifelines: rectangulos finos arriba con linea punteada vertical abajo
+- Flechas de mensaje: lineas horizontales con punta de flecha, de una lifeline a otra
+- Cajas de activacion: rectangulos finos sobre la lifeline mientras dura el proceso
+- Notas al costado si es necesario
+
+Colores planos sugeridos:
+- Lifelines: fondo blanco, borde gris #666666
+- Flechas: #333333
+- Cajas activacion: #dae8fc (azul clarito)
+- Notas: #fff2cc (amarillo clarito)
+
+Texto: Arial 10pt, centrado en las lifelines, sobre las flechas.
+
+--- CONTENIDO ---
+
+LIFELINES:
+[Usuario] [Login.jsx] [AuthContext] [api.js] [AuthController] [auth.service] [MySQL]
+
+FLUJO:
+1. Usuario escribe email y pass → Login.jsx
+2. Login.jsx → AuthContext: login(email, pass)
+3. AuthContext → api.js: POST /api/auth/login {email, pass}
+4. api.js → AuthController: HTTP request (con Bearer token si existe)
+5. AuthController valida que email y pass no esten vacios
+6. AuthController → auth.service: findOne('users', {email})
+7. auth.service → MySQL: SELECT * FROM users WHERE email = ?
+8. MySQL → auth.service: return user (o null)
+9. auth.service → AuthController: return user
+10. AuthController verifica: ¿usuario existe? No → 401
+11. AuthController → auth.service: comparePassword(password, hash)
+12. auth.service hace bcrypt.compare (en memoria, NO DB)
+13. auth.service → AuthController: boolean match
+14. AuthController verifica: ¿password correcta? No → 401
+15. AuthController → auth.service: generateToken(userId, email)
+16. auth.service: jwt.sign() (HS256, exp 24h)
+17. auth.service → AuthController: return token
+18. AuthController → api.js: 200 OK {token, user, refresh_token}
+19. api.js → AuthContext: response data
+20. AuthContext guarda token en localStorage, setUser(data)
+21. AuthContext → Login.jsx: redirige a Dashboard (/)
+22. Login.jsx → Usuario: muestra el Dashboard
+
+NOTAS:
+- Si el usuario elige "Modo Invitado": POST /auth/guest, NO consulta BD, genera JWT con {guest:true}
+- Al cargar la app: AuthContext.verifySession() hace POST /auth/verify con el token guardado
+- Si el token expiró: se borra localStorage y se redirige a /login

@@ -1,0 +1,244 @@
+=============================================================
+DIAGRAMA DE SECUENCIA - Reproduccion de Audio
+=============================================================
+Materia: Ingenieria de Software
+Estudiante: [Nombre]
+=============================================================
+
+=================== FLUJO 1: Reproducir Cancion (fuente NO YouTube) ===================
+
+[Usuario]   [SearchResults/   [PlayerContext]        [Player.jsx]           [HTML5 Audio]
+            Favorites/Etc]                                                    
+    |             |                    |                    |                   |
+    | 1. Click en |                    |                    |                   |
+    | ▶ Play      |                    |                    |                   |
+    |------------>|                    |                    |                   |
+    |             |                    |                    |                   |
+    |             | 2. playTrack(      |                    |                   |
+    |             | track, queue)      |                    |                   |
+    |             |------------------->|                    |                   |
+    |             |                    |                    |                   |
+    |             |                    | 3. setCurrentTrack(track)             |
+    |             |                    | setQueue(queue)    |                   |
+    |             |                    |                    |                   |
+    |             |                    | 4. Renderiza       |                   |
+    |             |                    | <Player track={    |                   |
+    |             |                    |   currentTrack} /> |                   |
+    |             |                    |------------------->|                   |
+    |             |                    |                    |                   |
+    |             |                    |                    | 5. useEffect      |
+    |             |                    |                    | detecta cambio    |
+    |             |                    |                    | de track          |
+    |             |                    |                    |                   |
+    |             |                    |                    | 6. source !=      |
+    |             |                    |                    | "youtube"?        |
+    |             |                    |                    | -> Crear nuevo    |
+    |             |                    |                    | Audio()           |
+    |             |                    |                    |                   |
+    |             |                    |                    | 7. audio.src =    |
+    |             |                    |                    | track.previewUrl  |
+    |             |                    |                    | audio.load()      |
+    |             |                    |                    |------------------>|
+    |             |                    |                    |                   |
+    |             |                    |                    | 8. Eventos:       |
+    |             |                    |                    | - error           |
+    |             |                    |                    | - loadedmetadata  |
+    |             |                    |                    | - ended           |
+    |             |                    |                    |<------------------|
+    |             |                    |                    |                   |
+    |             |                    |                    | 9. audio.play()   |
+    |             |                    |                    |------------------>|
+    |             |                    |                    |                   |
+    |             |                    |                    | 10. requestAnimationFrame loop |
+    |             |                    |                    | (actualiza currentTime cada frame) |
+    |             |                    |                    |                   |
+    | 11. Escucha |                    |                    |                   |
+    |<------------|                    |                    |                   |
+    |             |                    |                    |                   |
+
+
+=================== FLUJO 2: Reproducir Cancion (YouTube / YouTube Music) ===================
+
+[Usuario]   [SearchResults]   [PlayerContext]        [Player.jsx]           [YT IFrame API]
+    |             |                    |                    |                   |
+    | 1. Click ▶   |                    |                    |                   |
+    | (yt source)  |                    |                    |                   |
+    |------------>|                    |                    |                   |
+    |             |                    |                    |                   |
+    |             | 2. playTrack(track, queue)             |                   |
+    |             |------------------->|                    |                   |
+    |             |                    |                    |                   |
+    |             |                    | 3. setCurrentTrack, setQueue          |
+    |             |                    |                    |                   |
+    |             |                    | 4. Render <Player> |                   |
+    |             |                    |------------------->|                   |
+    |             |                    |                    |                   |
+    |             |                    |                    | 5. useEffect:     |
+    |             |                    |                    | Cargar script     |
+    |             |                    |                    | YouTube IFrame    |
+    |             |                    |                    | si no cargado     |
+    |             |                    |                    |                   |
+    |             |                    |                    | 6. source =       |
+    |             |                    |                    | "youtube"?        |
+    |             |                    |                    | -> Crear          |
+    |             |                    |                    | YT.Player({       |
+    |             |                    |                    |   videoId,        |
+    |             |                    |                    |   events: {       |
+    |             |                    |                    |     onReady,      |
+    |             |                    |                    |     onStateChange,|
+    |             |                    |                    |     onError }})   |
+    |             |                    |                    |------------------>|
+    |             |                    |                    |                   |
+    |             |                    |                    | 7. onReady:       |
+    |             |                    |                    | getDuration(),     |
+    |             |                    |                    | setVolume(),      |
+    |             |                    |                    | playVideo()       |
+    |             |                    |                    |<------------------|
+    |             |                    |                    |                   |
+    |             |                    |                    | 8. onStateChange: |
+    |             |                    |                    | - PLAYING: raf    |
+    |             |                    |                    | - PAUSED: stop raf|
+    |             |                    |                    | - ENDED: auto-next|
+    |             |                    |                    |<------------------|
+    |             |                    |                    |                   |
+    | 9. Escucha  |                    |                    |                   |
+    |<------------|                    |                    |                   |
+    |             |                    |                    |                   |
+
+
+=================== FLUJO 3: Control de Reproduccion ===================
+
+[Usuario]   [Player.jsx]           [HTML5 Audio / YT]
+    |             |                    |
+    | 1. Click    |                    |
+    | Pausa (⏸)   |                    |
+    |------------>|                    |
+    |             |                    |
+    |             | 2. togglePlay()   |
+    |             | source != youtube |
+    |             | -> audio.pause()  |
+    |             | -> cancel raf     |
+    |             | -> setIsPlaying(false)
+    |             |-------------------->|
+    |             |                    |
+    |<------------|                    |
+    |             |                    |
+    | 3. Click    |                    |
+    | Play (▶)    |                    |
+    |------------>|                    |
+    |             |                    |
+    |             | 4. togglePlay()   |
+    |             | -> audio.play()   |
+    |             | -> start raf loop |
+    |             | -> setIsPlaying(true)             |
+    |             |-------------------->|
+    |             |                    |
+    |<------------|                    |
+    |             |                    |
+    | 5. Arrastra |                    |
+    | barra de    |                    |
+    | progreso    |                    |
+    |------------>|                    |
+    |             |                    |
+    |             | 6. handleSeek(e)  |
+    |             | calcular % del    |
+    |             | click en la barra |
+    |             | audio.currentTime |
+    |             | = seekTime        |
+    |             |-------------------->|
+    |             |                    |
+    |<------------|                    |
+    |             |                    |
+    | 7. Sube     |                    |
+    | volumen     |                    |
+    |------------>|                    |
+    |             |                    |
+    |             | 8. handleVolume   |
+    |             | audio.volume = val|
+    |             | localStorage.set  |
+    |             | ('reproductor_    |
+    |             |  volume', val)    |
+    |             |-------------------->|
+    |             |                    |
+    |<------------|                    |
+    |             |                    |
+
+
+=================== FLUJO 4: Navegacion entre Canciones ===================
+
+[Usuario]   [Player.jsx]           [PlayerContext]
+    |             |                    |
+    | 1. Click    |                    |
+    | Siguiente   |                    |
+    |------------>|                    |
+    |             |                    |
+    |             | 2. handleNext()   |
+    |             | Busca indice      |
+    |             | actual en queue   |
+    |             | -> avanza 1       |
+    |             | (o aleatorio si   |
+    |             |  shuffle activo)  |
+    |             |                    |
+    |             | 3. setCurrentTrack(queue[nextIndex])
+    |             |------------------->|
+    |             |                    |
+    |             | 4. useEffect se    |
+    |             | activa con nuevo   |
+    |             | track -> cambia    |
+    |             | src y reproduce    |
+    |             |                    |
+    |<------------|                    |
+    |             |                    |
+    | 5. Click    |                    |
+    | Anterior ⏮  |                    |
+    |------------>|                    |
+    |             | 6. handlePrev()   |
+    |             | -> indice - 1      |
+    |             | (vuelve al inicio |
+    |             |  si estaba en 0)  |
+    |             |                    |
+    |<------------|                    |
+    |             |                    |
+
+
+=================== FLUJO 5: Ciclo de Vida - Fin de Cancion ===================
+
+[HTML5 Audio]   [Player.jsx]           [PlayerContext]
+    |                |                    |
+    | 1. Evento      |                    |
+    | 'ended'        |                    |
+    |--------------->|                    |
+    |                |                    |
+    |                | 2. ¿repeatMode?   |
+    |                | - 'one' -> seek(0)|
+    |                | - 'all' -> next() |
+    |                | - 'off' -> stop   |
+    |                |                    |
+    |                | 3. ¿shuffle?      |
+    |                | -> indice         |
+    |                | aleatorio         |
+    |                |                    |
+    |                | 4. setCurrentTrack(nextTrack)
+    |                |------------------->|
+    |                |                    |
+    |<---------------|                    |
+    |                |                    |
+
+
+NOTA: El Player.jsx tiene DOS mecanismos de reproduccion:
+      1. HTML5 Audio para Deezer, FMA, Internet Archive, Spotify
+      2. YouTube IFrame API para YouTube y YouTube Music
+      MusicBrainz NO tiene preview de audio (boton play deshabilitado)
+
+      El volumen se guarda en localStorage con la clave
+      'reproductor_volume' y se restaura al montar el componente.
+
+      Atajo de teclado: Barra espaciadora para play/pausa
+      (excepto cuando el foco esta en un input de texto).
+
+      Al cerrar el Player, se detiene el audio y se limpian
+      los event listeners para evitar memory leaks.
+
+=============================================================
+FIN - Diagrama de secuencia de Reproduccion de Audio
+=============================================================

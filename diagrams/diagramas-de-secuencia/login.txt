@@ -1,0 +1,108 @@
+=============================================================
+DIAGRAMA DE SECUENCIA - Login de Usuario
+=============================================================
+Materia: Ingenieria de Software
+Estudiante: [Nombre]
+=============================================================
+
+  [Usuario]       [Login.jsx]      [AuthContext]        [api.js]        [AuthController]     [auth.service]       [MySQL]
+      |               |                 |                  |                  |                   |                   |
+      | 1. Escribe    |                 |                  |                  |                   |                   |
+      | email y pass  |                 |                  |                  |                   |                   |
+      |-------------->|                 |                  |                  |                   |                   |
+      |               |                 |                  |                  |                   |                   |
+      |               | 2. click en     |                  |                  |                   |                   |
+      |               | "Iniciar"       |                  |                  |                   |                   |
+      |               |                 |                  |                  |                   |                   |
+      |               | 3. login(email, pass)             |                  |                   |                   |
+      |               |---------------->|                  |                  |                   |                   |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 | 4. POST /api/auth/login              |                   |                   |
+      |               |                 |                 {email, pass}        |                   |                   |
+      |               |                 |---------------->|                   |                   |                   |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  | 5. request HTTP  |                   |                   |
+      |               |                 |                  | (Bearer token si |                   |                   |
+      |               |                 |                  |  ya existe)      |                   |                   |
+      |               |                 |                  |----------------->|                   |                   |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  |                  | 6. Validar que     |                   |
+      |               |                 |                  |                  | email y pass       |                   |
+      |               |                 |                  |                  | no esten vacios    |                   |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  |                  | 7. findOne('users',{email})              |
+      |               |                 |                  |                  |------------------>|                   |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  |                  |                   | 8. SELECT * FROM  |
+      |               |                 |                  |                  |                   | users WHERE       |
+      |               |                 |                  |                  |                   | email = ?         |
+      |               |                 |                  |                  |                   |------------------>|
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  |                  |                   | 9. return user    |
+      |               |                 |                  |                  |                   |  (o null si no    |
+      |               |                 |                  |                  |                   |   existe)         |
+      |               |                 |                  |                  |                   |<------------------|
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  |                  | 10. ¿usuario       |                   |
+      |               |                 |                  |                  | existe?            |                   |
+      |               |                 |                  |                  | - No -> 401        |                   |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  |                  | 11. comparePassword(pass, hash)          |
+      |               |                 |                  |                  |------------------>|                   |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  |                  |                   | 12. bcrypt.compare
+      |               |                 |                  |                  |                   |------------------>| (NO DB, solo
+      |               |                 |                  |                  |                   |   comparacion     |
+      |               |                 |                  |                  |                   |   en memoria)     |
+      |               |                 |                  |                  |                   |<------------------|
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  |                  | 13. ¿password     |                   |
+      |               |                 |                  |                  | correcta?          |                   |
+      |               |                 |                  |                  | - No -> 401        |                   |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  |                  | 14. generateToken( |                   |
+      |               |                 |                  |                  | userId, email)     |                   |
+      |               |                 |                  |                  |------------------>|                   |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  |                  |                   | 15. jwt.sign()    |
+      |               |                 |                  |                  |                   | (HS256, exp 24h)  |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  |                  | 16. return token   |                   |
+      |               |                 |                  |                  |<------------------|                   |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  |                  | 17. 200 OK         |                   |
+      |               |                 |                  |                  | { token, user,     |                   |
+      |               |                 |                  |                  |   refresh_token }  |                   |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 |                  |<-----------------|                   |                   |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 | 18. Guarda       |                  |                   |                   |
+      |               |                 | token en         |                  |                   |                   |
+      |               |                 | localStorage     |                  |                   |                   |
+      |               |                 | setUser(data)    |                  |                   |                   |
+      |               |                 |                  |                  |                   |                   |
+      |               |                 | 19. Redirige a   |                  |                   |                   |
+      |               |                 | Dashboard (/)    |                  |                   |                   |
+      |               |<----------------|                  |                  |                   |                   |
+      |               |                 |                  |                  |                   |                   |
+      | 20. Ve el     |                 |                  |                  |                   |                   |
+      | Dashboard     |                 |                  |                  |                   |                   |
+      |<--------------|                 |                  |                  |                   |                   |
+      |               |                 |                  |                  |                   |                   |
+
+
+  NOTA: Si el usuario elige "Modo Invitado" en vez de login:
+        - Se llama POST /api/auth/guest
+        - NO consulta la BD
+        - Genera un JWT con { guest: true, userId: null }
+        - El usuario solo puede buscar y reproducir (NO guardar favoritos ni playlists)
+
+
+  NOTA: Al cargar la app, AuthContext.verifySession() hace:
+        POST /api/auth/verify con el token guardado
+        Si el token expiro -> se borra localStorage y se redirige a /login
+        Si el token es valido -> se restaura la sesion
+
+=============================================================
+FIN - Diagrama de secuencia de Login
+=============================================================

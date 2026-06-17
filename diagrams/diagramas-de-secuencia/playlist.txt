@@ -1,0 +1,188 @@
+=============================================================
+DIAGRAMA DE SECUENCIA - Gestion de Playlists
+=============================================================
+Materia: Ingenieria de Software
+Estudiante: [Nombre]
+=============================================================
+
+=================== FLUJO 1: Crear Playlist ===================
+
+[Usuario]   [Playlists.jsx]   [PlaylistsController]   [verifyTokenMW]   [requireRealUser]   [MySQL]
+    |             |                    |                     |               |                  |
+    | 1. Llena    |                    |                     |               |                  |
+    | nombre y    |                    |                     |               |                  |
+    | descripcion |                    |                     |               |                  |
+    |------------>|                    |                     |               |                  |
+    |             |                    |                     |               |                  |
+    |             | 2. Click           |                     |               |                  |
+    |             | "Crear Playlist"   |                     |               |                  |
+    |             |                    |                     |               |                  |
+    |             | 3. POST            |                     |               |                  |
+    |             | /api/playlists     |                     |               |                  |
+    |             | { name, description}                     |               |                  |
+    |             |------------------->|                     |               |                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 4. verifyToken +    |               |                  |
+    |             |                    | requireRealUser     |               |                  |
+    |             |                    |-------------------->|-------------->|                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 5. Validar name     |               |                  |
+    |             |                    | no vacio            |               |                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 6. INSERT INTO      |               |                  |
+    |             |                    | playlists           |               |                  |
+    |             |                    | (user_id, name,     |               |                  |
+    |             |                    |  description)       |               |                  |
+    |             |                    |------------------------------------->|                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 7. RETURNING id     |               |                  |
+    |             |                    |<-------------------------------------|                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 8. 201 Created      |               |                  |
+    |             |                    | { success, playlist}|               |                  |
+    |             |<-------------------|                     |               |                  |
+    |             |                    |                     |               |                  |
+    | 9. Ve la    |                    |                     |               |                  |
+    | playlist    |                    |                     |               |                  |
+    | en la lista |                    |                     |               |                  |
+    |<------------|                    |                     |               |                  |
+    |             |                    |                     |               |                  |
+
+
+=================== FLUJO 2: Agregar Track a Playlist ===================
+
+[Usuario]   [SearchResults]   [PlaylistsController]   [verifyTokenMW]   [requireRealUser]   [MySQL]
+    |             |                    |                     |               |                  |
+    | 1. Click +  |                    |                     |               |                  |
+    | en cancion  |                    |                     |               |                  |
+    |------------>|                    |                     |               |                  |
+    |             |                    |                     |               |                  |
+    |             | 2. Selecciona      |                     |               |                  |
+    |             | playlist del       |                     |               |                  |
+    |             | dropdown           |                     |               |                  |
+    |             |                    |                     |               |                  |
+    |             | 3. POST /api/playlists/:id/tracks         |               |                  |
+    |             | { external_track_id, source,              |               |                  |
+    |             |   track_title, artist, album,             |               |                  |
+    |             |   album_image, preview_url }              |               |                  |
+    |             |------------------->|                     |               |                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 4. verifyToken +    |               |                  |
+    |             |                    | requireRealUser     |               |                  |
+    |             |                    |-------------------->|-------------->|                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 5. Buscar playlist: |               |                  |
+    |             |                    | findOne(            |               |                  |
+    |             |                    |  'playlists',       |               |                  |
+    |             |                    |  { id: playlistId }) |               |                  |
+    |             |                    |------------------------------------->|                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 6. Verificar        |               |                  |
+    |             |                    | ownership:          |               |                  |
+    |             |                    | playlist.user_id == |               |                  |
+    |             |                    | req.user.userId?    |               |                  |
+    |             |                    | No -> 403           |               |                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 7. Validar track    |               |                  |
+    |             |                    | (external_track_id, |               |                  |
+    |             |                    |  source requeridos) |               |                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 8. INSERT INTO      |               |                  |
+    |             |                    | playlist_tracks     |               |                  |
+    |             |                    | (playlist_id,       |               |                  |
+    |             |                    |  external_track_id, |               |                  |
+    |             |                    |  source, ...)       |               |                  |
+    |             |                    |------------------------------------->|                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 9. 201 Created      |               |                  |
+    |             |<-------------------|                     |               |                  |
+    |             |                    |                     |               |                  |
+    | 10. Toast   |                    |                     |               |                  |
+    | "Agregada"  |                    |                     |               |                  |
+    |<------------|                    |                     |               |                  |
+    |             |                    |                     |               |                  |
+
+
+=================== FLUJO 3: Listar Playlists ===================
+
+[Usuario]   [Playlists.jsx]   [PlaylistsController]   [verifyTokenMW]   [MySQL]
+    |             |                    |                     |               |
+    | 1. Navega   |                    |                     |               |
+    | a /playlists|                    |                     |               |
+    |------------>|                    |                     |               |
+    |             |                    |                     |               |
+    |             | 2. loadPlaylists() |                     |               |
+    |             | GET /api/playlists |                     |               |
+    |             |------------------->|                     |               |
+    |             |                    |                     |               |
+    |             |                    | 3. verifyToken      |               |
+    |             |                    | (no requiere        |               |
+    |             |                    |  requireRealUser,   |               |
+    |             |                    |  guest puede ver    |               |
+    |             |                    |  pero estara vacio) |               |
+    |             |                    |                     |               |
+    |             |                    | 4. findMany(        |               |
+    |             |                    | 'playlists',        |               |
+    |             |                    | {user_id:userId})   |               |
+    |             |                    |-------------------->|               |
+    |             |                    |                     |               |
+    |             |                    | 5. SELECT * FROM    |               |
+    |             |                    | playlists WHERE     |               |
+    |             |                    | user_id = ?         |               |
+    |             |                    |                     |               |
+    |             |                    | 6. return playlists |               |
+    |             |                    |<--------------------|               |
+    |             |                    |                     |               |
+    |             | 7. 200 { playlists:[...] }              |               |
+    |             |<-------------------|                     |               |
+    |             |                    |                     |               |
+    | 8. Renderiza|                    |                     |               |
+    | lista       |                    |                     |               |
+    |<------------|                    |                     |               |
+    |             |                    |                     |               |
+
+
+=================== FLUJO 4: Eliminar Playlist ===================
+
+[Usuario]   [Playlists.jsx]   [PlaylistsController]   [verifyTokenMW]   [requireRealUser]   [MySQL]
+    |             |                    |                     |               |                  |
+    | 1. Click    |                    |                     |               |                  |
+    | eliminar    |                    |                     |               |                  |
+    |------------>|                    |                     |               |                  |
+    |             |                    |                     |               |                  |
+    |             | 2. DELETE          |                     |               |                  |
+    |             | /api/playlists/:id |                     |               |                  |
+    |             |------------------->|                     |               |                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 3. verify + requireRealUser           |                  |
+    |             |                    | (bloquea guest)     |               |                  |
+    |             |                    |-------------------->|-------------->|                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 4. Buscar +         |               |                  |
+    |             |                    | verificar ownership |               |                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 5. DELETE FROM      |               |                  |
+    |             |                    | playlists WHERE id=?|               |                  |
+    |             |                    | (cascada: tracks   |               |                  |
+    |             |                    |  se borran solos)   |               |                  |
+    |             |                    |------------------------------------->|                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 6. 200 { success }  |               |                  |
+    |             |<-------------------|                     |               |                  |
+    |             |                    |                     |               |                  |
+    | 7. Elimina  |                    |                     |               |                  |
+    | de la lista |                    |                     |               |                  |
+    |<------------|                    |                     |               |                  |
+    |             |                    |                     |               |                  |
+
+
+NOTA: Las playlists solo las puede crear/editar/eliminar un usuario
+      registrado (NO invitado).
+      Los endpoints de escritura usan requireRealUser middleware
+      que devuelve 403 si el usuario es guest.
+      Los endpoints de lectura (GET) permiten guest, pero
+      devuelven lista vacia porque el guest no tiene userId.
+
+=============================================================
+FIN - Diagrama de secuencia de Playlists
+=============================================================

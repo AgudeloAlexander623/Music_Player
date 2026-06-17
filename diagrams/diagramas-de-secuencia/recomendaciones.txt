@@ -1,0 +1,166 @@
+=============================================================
+DIAGRAMA DE SECUENCIA - Recomendaciones
+=============================================================
+Materia: Ingenieria de Software
+Estudiante: [Nombre]
+=============================================================
+
+=================== FLUJO 1: Recomendaciones Personalizadas ===================
+
+[Usuario]   [Dashboard.jsx]   [RecommendationsController]   [verifyTokenMW]   [python.service.js]   [FastAPI Python]   [MySQL]
+    |             |                       |                      |                  |                   |                 |
+    | 1. Carga    |                       |                      |                  |                   |                 |
+    | Dashboard   |                       |                      |                  |                   |                 |
+    |------------>|                       |                      |                  |                   |                 |
+    |             |                       |                      |                  |                   |                 |
+    |             | 2. useEffect          |                      |                  |                   |                 |
+    |             | (monta componente)    |                      |                  |                   |                 |
+    |             |                       |                      |                  |                   |                 |
+    |             | 3. GET /api/recommendations                  |                  |                   |                 |
+    |             | (con JWT token)       |                      |                  |                   |                 |
+    |             |---------------------->|                      |                  |                   |                 |
+    |             |                       |                      |                  |                   |                 |
+    |             |                       | 4. verifyToken       |                  |                   |                 |
+    |             |                       |--------------------->|                  |                   |                 |
+    |             |                       |                      |                  |                   |                 |
+    |             |                       | 5. next() (valido)  |                  |                   |                 |
+    |             |                       |<---------------------|                  |                   |                 |
+    |             |                       |                      |                  |                   |                 |
+    |             |                       | 6. getRecommendations(userId, limit)    |                   |                 |
+    |             |                       |--------------------------------------->|                   |                 |
+    |             |                       |                      |                  |                   |                 |
+    |             |                       |                      | 7. fetchUserTracks(userId)           |                 |
+    |             |                       |                      |----------------------------------->|                 |
+    |             |                       |                      |                  |                   |                 |
+    |             |                       |                      | 8. Buscar favoritos del usuario     |                 |
+    |             |                       |                      | findMany('favorite_tracks',         |                 |
+    |             |                       |                      |           {user_id: userId}, 20)    |                 |
+    |             |                       |                      |---------------------------------->|                 |
+    |             |                       |                      |                  |                   |                 |
+    |             |                       |                      | 9. return tracks |                   |                 |
+    |             |                       |                      |<----------------------------------|                 |
+    |             |                       |                      |                  |                   |                 |
+    |             |                       |                      | 10. Si no hay favoritos:            |                 |
+    |             |                       |                      | fallback a        |                   |                 |
+    |             |                       |                      | search_history    |                   |                 |
+    |             |                       |                      |----------------------------------->|                 |
+    |             |                       |                      |                  |                   |                 |
+    |             |                       |                      | 11. POST http://localhost:8000/recommend           |
+    |             |                       |                      | { tracks: [...], count: 10 }       |                 |
+    |             |                       |                      |---------------------------------->|                 |
+    |             |                       |                      |                  |                   |                 |
+    |             |                       |                      |                  | 12. TF-IDF /       |                 |
+    |             |                       |                      |                  | Content-based      |                 |
+    |             |                       |                      |                  | scoring contra     |                 |
+    |             |                       |                      |                  | catalogo interno   |                 |
+    |             |                       |                      |                  | (60 tracks)        |                 |
+    |             |                       |                      |                  |                   |                 |
+    |             |                       |                      |                  | 13. return {       |                 |
+    |             |                       |                      |                  | recommendations:   |                 |
+    |             |                       |                      |                  |   [{id, name,      |                 |
+    |             |                       |                      |                  |     artist, score, |                 |
+    |             |                       |                      |                  |     reason}],      |                 |
+    |             |                       |                      |                  |   metadata }       |                 |
+    |             |                       |                      |<-----------------|                   |                 |
+    |             |                       |                      |                  |                   |                 |
+    |             |                       |                      | 14. Si falla la  |                   |                 |
+    |             |                       |                      | conexion a       |                   |                 |
+    |             |                       |                      | Python:          |                   |                 |
+    |             |                       |                      | -> usa FALLBACK_ |                   |                 |
+    |             |                       |                      |    RECOMMENDATIONS|                   |                 |
+    |             |                       |                      | (hardcodeadas)   |                   |                 |
+    |             |                       |                      |                   |                   |                 |
+    |             |                       | 15. return { success, recommendations }  |                   |                 |
+    |             |                       |<---------------------------------------|                   |                 |
+    |             |                       |                      |                  |                   |                 |
+    |             | 16. 200 { recommendations: [...] }          |                  |                   |                 |
+    |             |<----------------------|                      |                  |                   |                 |
+    |             |                       |                      |                  |                   |                 |
+    |             | 17. Renderiza         |                      |                  |                   |                 |
+    |             | <ContentSection       |                      |                  |                   |                 |
+    |             |  title="Recomendado   |                      |                  |                   |                 |
+    |             |  para ti" />          |                      |                  |                   |                 |
+    |             |                       |                      |                  |                   |                 |
+    | 18. Ve las  |                       |                      |                  |                   |                 |
+    | recomendac. |                       |                      |                  |                   |                 |
+    |<------------|                       |                      |                  |                   |                 |
+    |             |                       |                      |                  |                   |                 |
+
+
+=================== FLUJO 2: Health Check del Servicio Python ===================
+
+[Usuario]   [RecommendationsController]   [python.service.js]   [FastAPI Python]
+    |                    |                        |                   |
+    | 1. GET /api/       |                        |                   |
+    | recommendations/   |                        |                   |
+    | status             |                        |                   |
+    |------------------->|                        |                   |
+    |                    |                        |                   |
+    |                    | 2. checkPythonServiceHealth()              |
+    |                    |----------------------->|                   |
+    |                    |                        |                   |
+    |                    |                        | 3. GET /health    |
+    |                    |                        | (timeout: 3s)    |
+    |                    |                        |------------------>|
+    |                    |                        |                   |
+    |                    |                        | 4. { status: "ok",
+    |                    |                        |     catalog_size:  |
+    |                    |                        |      60,          |
+    |                    |                        |     version:      |
+    |                    |                        |      "0.1.0-beta"}|
+    |                    |                        |<------------------|
+    |                    |                        |                   |
+    |                    | 5. return { success, data }               |
+    |                    |<-----------------------|                   |
+    |                    |                        |                   |
+    | 6. 200 { success, status, ... }            |                   |
+    |<-------------------|                        |                   |
+    |                    |                        |                   |
+
+
+=================== FLUJO 3: Recomendaciones Populares (sin auth) ===================
+
+[Usuario]   [RecommendationsController]   [python.service.js]   [FastAPI Python]
+    |                    |                        |                   |
+    | 1. GET /api/       |                        |                   |
+    | recommendations/   |                        |                   |
+    | popular            |                        |                   |
+    |------------------->|                        |                   |
+    |                    |                        |                   |
+    |                    | 2. getPopularRecommendations(limit)        |
+    |                    |----------------------->|                   |
+    |                    |                        |                   |
+    |                    |                        | 3. GET /recommend/popular?count=10 |
+    |                    |                        |------------------>|
+    |                    |                        |                   |
+    |                    |                        | 4. Random subset  |
+    |                    |                        | del catalogo      |
+    |                    |                        | (catalog.py)      |
+    |                    |                        |                   |
+    |                    |                        | 5. return tracks  |
+    |                    |                        |<------------------|
+    |                    |                        |                   |
+    |                    | 6. return { success, recommendations }    |
+    |                    |<-----------------------|                   |
+    |                    |                        |                   |
+    | 7. 200 OK         |                        |                   |
+    |<-------------------|                        |                   |
+    |                    |                        |                   |
+
+
+NOTA: El sistema de recomendaciones actualmente usa un enfoque
+      de content-based filtering:
+        - Si el usuario tiene favoritos: calcula similitud por
+          artista, genero y palabras clave
+        - Si NO tiene favoritos: devuelve canciones populares
+          aleatorias del catalogo
+        - Si el servicio Python no responde: usa recomendaciones
+          hardcodeadas como fallback
+
+      El servicio Python usa TF-IDF y similitud de coseno
+      para encontrar canciones parecidas a las que el usuario
+      ya ha escuchado o marcado como favoritas.
+
+=============================================================
+FIN - Diagrama de secuencia de Recomendaciones
+=============================================================

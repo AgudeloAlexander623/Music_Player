@@ -1,0 +1,172 @@
+=============================================================
+DIAGRAMA DE SECUENCIA - Gestion de Favoritos
+=============================================================
+Materia: Ingenieria de Software
+Estudiante: [Nombre]
+=============================================================
+
+=================== FLUJO 1: Agregar Favorito ===================
+
+[Usuario]   [Dashboard/SearchResults]   [FavoritesController]   [verifyTokenMW]   [requireRealUser]   [MySQL]
+    |                 |                         |                    |                  |                 |
+    | 1. Click en     |                         |                    |                  |                 |
+    | corazon (♡)     |                         |                    |                  |                 |
+    |---------------->|                         |                    |                  |                 |
+    |                 |                         |                    |                  |                 |
+    |                 | 2. handleAddFavorite(track)                  |                  |                 |
+    |                 |                         |                    |                  |                 |
+    |                 | 3. ¿Usuario invitado?   |                    |                  |                 |
+    |                 | Si -> toast "Registrate |                    |                  |                 |
+    |                 |        para guardar"    |                    |                  |                 |
+    |                 |        y return          |                    |                  |                 |
+    |                 |                         |                    |                  |                 |
+    |                 | 4. POST /api/favorites   |                    |                  |                 |
+    |                 | { external_track_id,    |                    |                  |                 |
+    |                 |   source, track_title,  |                    |                  |                 |
+    |                 |   artist, album,        |                    |                  |                 |
+    |                 |   album_image,          |                    |                  |                 |
+    |                 |   preview_url }         |                    |                  |                 |
+    |                 |------------------------>|                    |                  |                 |
+    |                 |                         |                    |                  |                 |
+    |                 |                         | 5. verifyTokenMiddleware            |                 |
+    |                 |                         | (decodifica JWT,    |                  |                 |
+    |                 |                         |  setea req.user)    |                  |                 |
+    |                 |                         |------------------->|                  |                 |
+    |                 |                         |                    |                  |                 |
+    |                 |                         | 6. Token valido -> next()            |                 |
+    |                 |                         |<-------------------|                  |                 |
+    |                 |                         |                    |                  |                 |
+    |                 |                         | 7. requireRealUser                    |                 |
+    |                 |                         | (bloquea guest)    |                  |                 |
+    |                 |                         |------------------------------------->|                 |
+    |                 |                         |                    |                  |                 |
+    |                 |                         | 8. No es guest -> next()             |                 |
+    |                 |                         |<-------------------------------------|                 |
+    |                 |                         |                    |                  |                 |
+    |                 |                         | 9. Validar campos  |                  |                 |
+    |                 |                         | (external_track_id,|                  |                 |
+    |                 |                         |  source,           |                  |                 |
+    |                 |                         |  track_title req)  |                  |                 |
+    |                 |                         |                    |                  |                 |
+    |                 |                         | 10. validar source |                  |                 |
+    |                 |                         | contra lista       |                  |                 |
+    |                 |                         | permitida          |                  |                 |
+    |                 |                         |                    |                  |                 |
+    |                 |                         | 11. ¿Ya existe?    |                  |                 |
+    |                 |                         | SELECT * FROM      |                  |                 |
+    |                 |                         | favorite_tracks    |                  |                 |
+    |                 |                         | WHERE user_id=?    |                  |                 |
+    |                 |                         | AND external_      |                  |                 |
+    |                 |                         | track_id=?         |                  |                 |
+    |                 |                         | AND source=?       |                  |                 |
+    |                 |                         |------------------------------------->|                 |
+    |                 |                         |                    |                  |                 |
+    |                 |                         | 12. No existe      |                  |                 |
+    |                 |                         |<-------------------------------------|                 |
+    |                 |                         |                    |                  |                 |
+    |                 |                         | 13. INSERT INTO    |                  |                 |
+    |                 |                         | favorite_tracks    |                  |                 |
+    |                 |                         | (user_id, source,  |                  |                 |
+    |                 |                         |  external_track_id,|                  |                 |
+    |                 |                         |  track_title,      |                  |                 |
+    |                 |                         |  artist, album,    |                  |                 |
+    |                 |                         |  album_image,      |                  |                 |
+    |                 |                         |  preview_url)      |                  |                 |
+    |                 |                         |------------------------------------->|                 |
+    |                 |                         |                    |                  |                 |
+    |                 |                         | 14. RETURNING id   |                  |                 |
+    |                 |                         |<-------------------------------------|                 |
+    |                 |                         |                    |                  |                 |
+    |                 |                         | 15. 201 Created    |                  |                 |
+    |                 |                         | { success: true,   |                  |                 |
+    |                 |                         |   message: "Favorito agregado",      |                 |
+    |                 |                         |   favorite: {...}} |                  |                 |
+    |                 |<------------------------|                    |                  |                 |
+    |                 |                         |                    |                  |                 |
+    |                 | 16. Muestra toast       |                    |                  |                 |
+    |                 | "Agregado a favoritos"  |                    |                  |                 |
+    |                 | Actualiza UI            |                    |                  |                 |
+    |<----------------|                         |                    |                  |                 |
+    |                 |                         |                    |                  |                 |
+
+
+=================== FLUJO 2: Listar Favoritos ===================
+
+[Usuario]   [Favorites.jsx]   [FavoritesController]   [verifyTokenMW]   [MySQL]
+    |             |                    |                     |               |
+    | 1. Entra a  |                    |                     |               |
+    | /favorites  |                    |                     |               |
+    |------------>|                    |                     |               |
+    |             |                    |                     |               |
+    |             | 2. loadFavorites() |                     |               |
+    |             | GET /api/favorites |                     |               |
+    |             |------------------->|                     |               |
+    |             |                    |                     |               |
+    |             |                    | 3. verifyToken      |               |
+    |             |                    |-------------------->|               |
+    |             |                    |                     |               |
+    |             |                    | 4. next()           |               |
+    |             |                    |<--------------------|               |
+    |             |                    |                     |               |
+    |             |                    | 5. findMany(        |               |
+    |             |                    | 'favorite_tracks',  |               |
+    |             |                    | { user_id: userId })|               |
+    |             |                    |-------------------->|               |
+    |             |                    |                     |               |
+    |             |                    | 6. SELECT * FROM    |               |
+    |             |                    | favorite_tracks     |               |
+    |             |                    | WHERE user_id = ?   |               |
+    |             |                    |                     |               |
+    |             |                    | 7. return rows      |               |
+    |             |                    |<--------------------|               |
+    |             |                    |                     |               |
+    |             | 8. 200 { favorites:[...] }              |               |
+    |             |<-------------------|                     |               |
+    |             |                    |                     |               |
+    | 9. Renderiza lista            |                     |               |
+    |<------------|                    |                     |               |
+    |             |                    |                     |               |
+
+
+=================== FLUJO 3: Eliminar Favorito ===================
+
+[Usuario]   [Favorites.jsx]   [FavoritesController]   [verifyTokenMW]   [requireRealUser]   [MySQL]
+    |             |                    |                     |               |                  |
+    | 1. Click en  |                    |                     |               |                  |
+    | eliminar     |                    |                     |               |                  |
+    |------------>|                    |                     |               |                  |
+    |             |                    |                     |               |                  |
+    |             | 2. DELETE           |                     |               |                  |
+    |             | /api/favorites/:id  |                     |               |                  |
+    |             |------------------->|                     |               |                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 3. verify + requireRealUser          |                  |
+    |             |                    | (como en el flujo 1)                 |                  |
+    |             |                    |------------------------------------->|                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 4. Buscar favorite: |               |                  |
+    |             |                    | findOne(id)         |               |                  |
+    |             |                    |------------------------------------->|                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 5. Verificar        |               |                  |
+    |             |                    | ownership:          |               |                  |
+    |             |                    | favorite.user_id == |               |                  |
+    |             |                    | req.user.userId?    |               |                  |
+    |             |                    | - No -> 403         |               |                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 6. DELETE FROM      |               |                  |
+    |             |                    | favorite_tracks     |               |                  |
+    |             |                    | WHERE id = ?        |               |                  |
+    |             |                    |------------------------------------->|                  |
+    |             |                    |                     |               |                  |
+    |             |                    | 7. 200 { success }  |               |                  |
+    |             |<-------------------|                     |               |                  |
+    |             |                    |                     |               |                  |
+    | 8. Elimina  |                    |                     |               |                  |
+    | del estado  |                    |                     |               |                  |
+    |<------------|                    |                     |               |                  |
+    |             |                    |                     |               |                  |
+
+=============================================================
+FIN - Diagrama de secuencia de Favoritos
+=============================================================

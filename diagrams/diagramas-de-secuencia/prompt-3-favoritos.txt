@@ -1,0 +1,73 @@
+Genera el codigo XML de Draw.io para un diagrama de secuencia UML, basado EXCLUSIVAMENTE en el siguiente contenido.
+
+IMPORTANTE: XML directo para Draw.io. Estilo "junior": diagrama de secuencia con trazo simple, colores planos, sin efectos. Que se vea hecho a mano por alguien que esta aprendiendo pero que sabe del tema.
+
+Usa el formato clasico:
+- Lifelines: rectangulo fino + linea punteada vertical abajo
+- Flechas de mensaje entre lifelines
+- Cajas de activacion sobre las lifelines
+- Notas opcionales con fondo amarillo
+
+Colores:
+- Lifeline fondo: #ffffff, borde: #666666
+- Mensajes: #333333 con endArrow=classic
+- Activacion: #dae8fc
+- Notas: #fff2cc con borde #d6b656
+
+Texto Arial 10pt.
+
+Este diagrama tiene 3 FLUJOS separados. Dejalos bien diferenciados con espacios o divisores.
+
+--- CONTENIDO DEL FLUJO 1: AGREGAR FAVORITO ---
+
+LIFELINES: [Usuario] [Dashboard/SearchResults] [FavoritesController] [verifyTokenMW] [requireRealUser] [MySQL]
+
+1. Usuario click en corazon (♡) → Dashboard/SearchResults
+2. Dashboard/SearchResults: handleAddFavorite(track)
+3. ¿Usuario invitado? Si → toast "Registrate para guardar" y return
+4. Dashboard/SearchResults → FavoritesController: POST /api/favorites {external_track_id, source, track_title, artist, album, album_image, preview_url}
+5. FavoritesController → verifyTokenMW: verifica JWT, setea req.user
+6. verifyTokenMW → FavoritesController: next() (valido)
+7. FavoritesController → requireRealUser: bloquea guest
+8. requireRealUser → FavoritesController: next() (no es guest)
+9. FavoritesController valida campos requeridos y source permitido
+10. FavoritesController → MySQL: SELECT * FROM favorite_tracks WHERE user_id=? AND external_track_id=? AND source=?
+11. MySQL → FavoritesController: no existe (sigue)
+12. FavoritesController → MySQL: INSERT INTO favorite_tracks (...)
+13. MySQL → FavoritesController: RETURNING id
+14. FavoritesController → Dashboard/SearchResults: 201 Created {success, favorite}
+15. Dashboard/SearchResults muestra toast "Agregado a favoritos", actualiza UI
+16. Dashboard/SearchResults → Usuario: ve el cambio
+
+--- CONTENIDO DEL FLUJO 2: LISTAR FAVORITOS ---
+
+LIFELINES: [Usuario] [Favorites.jsx] [FavoritesController] [verifyTokenMW] [MySQL]
+
+1. Usuario navega a /favorites → Favorites.jsx
+2. Favorites.jsx: loadFavorites() → GET /api/favorites
+3. Favorites.jsx → FavoritesController: request
+4. FavoritesController → verifyTokenMW: verifica
+5. verifyTokenMW → FavoritesController: next()
+6. FavoritesController → MySQL: findMany('favorite_tracks', {user_id: userId})
+7. MySQL → FavoritesController: SELECT * FROM favorite_tracks WHERE user_id = ?
+8. FavoritesController → Favorites.jsx: 200 {favorites: [...]}
+9. Favorites.jsx renderiza lista
+10. Favorites.jsx → Usuario: ve sus favoritos
+
+--- CONTENIDO DEL FLUJO 3: ELIMINAR FAVORITO ---
+
+LIFELINES: [Usuario] [Favorites.jsx] [FavoritesController] [verifyTokenMW] [requireRealUser] [MySQL]
+
+1. Usuario click en eliminar → Favorites.jsx
+2. Favorites.jsx → FavoritesController: DELETE /api/favorites/:id
+3. FavoritesController → verifyTokenMW + requireRealUser: verifican
+4. FavoritesController → MySQL: findOne('favorite_tracks', {id})
+5. MySQL → FavoritesController: return favorite
+6. FavoritesController verifica ownership: favorite.user_id == req.user.userId? No → 403
+7. FavoritesController → MySQL: DELETE FROM favorite_tracks WHERE id = ?
+8. MySQL → FavoritesController: ok
+9. FavoritesController → Favorites.jsx: 200 {success}
+10. Favorites.jsx elimina del estado local
+11. Favorites.jsx → Usuario: ve la lista actualizada
+
+NOTA: Los endpoints de escritura requieren requireRealUser (403 si guest). El GET permite guest pero devuelve lista vacia.

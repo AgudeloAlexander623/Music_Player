@@ -1,0 +1,125 @@
+================================================================================
+DIAGRAMA DE SECUENCIA - Busqueda Musical (Multi-Fuente)
+================================================================================
+Materia: Ingenieria de Software
+Estudiante: [Nombre]
+================================================================================
+
+[Usuario]   [Dashboard.jsx]   [SearchResults]   [api.js]   [SearchController]   [PluginRegistry]   [SpotifyAPI]   [MB API]   [FMA API]   [mergeResults]   [MySQL]
+    |             |                 |              |               |                   |               |            |          |              |               |
+    | 1. Escribe  |                 |              |               |                   |               |            |          |              |               |
+    | "beatles"   |                 |              |               |                   |               |            |          |              |               |
+    |------------>|                 |              |               |                   |               |            |          |              |               |
+    |             |                 |              |               |                   |               |            |          |              |               |
+    |             | 2. useEffect    |              |               |                   |               |            |          |              |               |
+    |             | detecta >= 2   |              |               |                   |               |            |          |              |               |
+    |             | caracteres     |              |               |                   |               |            |          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             | 3. GET /api/search?q=beatles&limit=10&page=1                      |               |            |          |              |               |
+    |             | (con AbortController timeout 10s)                                 |               |            |          |              |               |
+    |             |--------------->|              |               |                   |               |            |          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                | 4. request   |               |                   |               |            |          |              |               |
+    |             |                | con JWT si   |               |                   |               |            |          |              |               |
+    |             |                | autenticado  |               |                   |               |            |          |              |               |
+    |             |                |------------->|               |                   |               |            |          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              | 5. searchController(req,res)       |               |            |          |              |               |
+    |             |                |              |--------------->|                   |               |            |          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               | 6. Valida query   |               |            |          |              |               |
+    |             |                |              |               | (>= 2 caracteres) |               |            |          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               | 7. getAvailable() |               |            |          |              |               |
+    |             |                |              |               |------------------>|               |            |          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               | 8. return plugins |               |            |          |              |               |
+    |             |                |              |               | disponibles       |               |            |          |              |               |
+    |             |                |              |               |<------------------|               |            |          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               | 9. searchAll()    |               |            |          |              |               |
+    |             |                |              |               | (Promise.all)     |               |            |          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               | 10. searchSpotify |               |            |          |              |               |
+    |             |                |              |               |------------------|--------------->|            |          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               |                   |               | 11. GET /v1/search?q=beatles          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               | 12. searchMusicBrainz           |            |          |              |               |
+    |             |                |              |               |------------------|--------------------------->|          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               |                   |               | 13. GET /ws/2/recording/?q=beatles   |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               | 14. searchFMA()   |               |            |          |              |               |
+    |             |                |              |               |------------------|--------------------------->|          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               |                   |               |            | 15. GET /api/v1/tracks/search      |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               | 16. TODAS las    |               |            |          |              |               |
+    |             |                |              |               | promesas         |               |            |          |              |               |
+    |             |                |              |               | se resuelven     |               |            |          |              |               |
+    |             |                |              |               | (o fallan con    |               |            |          |              |               |
+    |             |                |              |               | catch individual)|               |            |          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               | 17. mergeResults(spotify, musicbrainz, fma)        |          |              |               |
+    |             |                |              |               |------------------|--------------------------->|              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               |                   |               |            |          | 18. Deduplica |               |
+    |             |                |              |               |                   |               |            |          | por ${source} |               |
+    |             |                |              |               |                   |               |            |          | -${id}       |               |
+    |             |                |              |               |                   |               |            |          | Ordena:       |               |
+    |             |                |              |               |                   |               |            |          | Deezer -> FMA |               |
+    |             |                |              |               |                   |               |            |          | -> YouTube... |               |
+    |             |                |              |               |                   |               |            |          |               |               |
+    |             |                |              |               | 19. return array  |               |            |          |               |               |
+    |             |                |              |               | unico de tracks   |               |            |          |               |               |
+    |             |                |              |               |<------------------|--------------------------|               |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               | 20. Si req.user  |               |            |          |               |               |
+    |             |                |              |               | existe ->        |               |            |          |               |               |
+    |             |                |              |               | INSERT INTO      |               |            |          |               |               |
+    |             |                |              |               | search_history   |               |            |          |               |               |
+    |             |                |              |               |------------------------------------------->|               |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                |              |               | 21. 200 OK        |               |            |          |               |               |
+    |             |                |              |               | { tracks: [...], |               |            |          |               |               |
+    |             |                |              |               |   count: 9,       |               |            |          |               |               |
+    |             |                |              |               |   sources: {...}, |               |            |          |               |               |
+    |             |                |              |               |   warnings: [] }  |               |            |          |               |               |
+    |             |                |              |<--------------|                   |               |            |          |              |               |
+    |             |                |              |               |                   |               |            |          |              |               |
+    |             |                | 22. Responde con datos      |                   |               |            |          |              |               |
+    |             |                |<-------------|               |                   |               |            |          |              |               |
+    |             |                |               |               |                   |               |            |          |              |               |
+    |             | 23. setSearchResults(tracks)   |               |                   |               |            |          |              |               |
+    |             |<--------------|                |               |                   |               |            |          |              |               |
+    |             |                |               |               |                   |               |            |          |              |               |
+    |             | 24. Renderiza  |               |               |                   |               |            |          |              |               |
+    |             | tarjetas de    |               |               |                   |               |            |          |              |               |
+    |             | canciones      |               |               |                   |               |            |          |              |               |
+    |             |                |               |               |                   |               |            |          |              |               |
+    | 25. Ve los  |                |               |               |                   |               |            |          |              |               |
+    | resultados  |                |               |               |                   |               |            |          |              |               |
+    |<------------|                |               |               |                   |               |            |          |              |               |
+    |             |                |               |               |                   |               |            |          |              |               |
+
+
+NOTA IMPORTANTE:
+  - Las 3 APIs se llaman EN PARALELO con Promise.all()
+  - Cada llamada tiene su propio try/catch
+  - Si una API falla, las otras siguen funcionando (resiliencia)
+  - Si todas fallan -> HTTP 500
+  - Si al menos una funciona -> HTTP 200 (o 206 si alguna fallo)
+  - El merge elimina duplicados por clave compuesta source+id
+  - Las APIs que requieren API key (Spotify, FMA): si no estan configuradas,
+    su plugin devuelve isAvailable() = false y no se ejecutan
+
+
+NOTA: MusicBrainz NO tiene preview de audio
+      FMA tiene audio completo (Creative Commons)
+      Deezer tiene previews de 30s
+      YouTube/YouTube Music usan el reproductor IFrame
+
+================================================================================
+FIN - Diagrama de secuencia de Busqueda Musical
+================================================================================

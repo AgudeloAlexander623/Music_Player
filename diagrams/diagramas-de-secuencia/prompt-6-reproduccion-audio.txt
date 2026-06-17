@@ -1,0 +1,88 @@
+Genera el codigo XML de Draw.io para un diagrama de secuencia UML, basado EXCLUSIVAMENTE en el siguiente contenido.
+
+IMPORTANTE: XML directo para Draw.io. Estilo "junior": trazo simple, colores planos, diagrama de secuencia hecho por alguien que esta aprendiendo pero se nota que entiende el tema. Nada fancy.
+
+Formato clasico:
+- Lifelines: rectangulo + linea punteada vertical
+- Flechas con punta
+- Activacion: caja fina
+- Separar los 5 flujos con espacios
+
+Colores:
+- Lifeline: #ffffff borde #666666
+- Flechas: #333333
+- Activacion: #dae8fc
+- Notas: #fff2cc borde #d6b656
+
+Texto Arial 10pt.
+
+--- CONTENIDO DEL FLUJO 1: REPRODUCIR CANCION (fuente no YouTube) ---
+
+LIFELINES: [Usuario] [SearchResults/Favorites/Etc] [PlayerContext] [Player.jsx] [HTML5 Audio]
+
+1. Usuario click en ▶ Play → SearchResults/Favorites/Etc
+2. SearchResults → PlayerContext: playTrack(track, queue)
+3. PlayerContext: setCurrentTrack(track), setQueue(queue)
+4. PlayerContext → Player.jsx: renderiza <Player track={currentTrack} />
+5. Player.jsx: useEffect detecta cambio de track
+6. source != "youtube"? → Player.jsx crea nuevo Audio()
+7. Player.jsx → HTML5 Audio: audio.src = track.previewUrl, audio.load()
+8. HTML5 Audio → Player.jsx: eventos (error, loadedmetadata, ended)
+9. Player.jsx → HTML5 Audio: audio.play()
+10. Player.jsx: inicia requestAnimationFrame loop (actualiza currentTime cada frame)
+11. Player.jsx → Usuario: escucha la cancion
+
+--- CONTENIDO DEL FLUJO 2: REPRODUCIR CANCION (YouTube) ---
+
+LIFELINES: [Usuario] [SearchResults] [PlayerContext] [Player.jsx] [YT IFrame API]
+
+1. Usuario click ▶ (track con source=youtube) → SearchResults
+2. SearchResults → PlayerContext: playTrack(track, queue)
+3. PlayerContext: setCurrentTrack, setQueue
+4. PlayerContext → Player.jsx: renderiza <Player />
+5. Player.jsx: useEffect carga script YouTube IFrame (si no cargado)
+6. source = "youtube"? → Player.jsx crea YT.Player({videoId, events: {onReady, onStateChange, onError}})
+7. Player.jsx → YT IFrame API: new YT.Player()
+8. YT IFrame API → Player.jsx: onReady → getDuration(), setVolume(), playVideo()
+9. YT IFrame API → Player.jsx: onStateChange (PLAYING → raf, PAUSED → stop raf, ENDED → auto-next)
+10. Player.jsx → Usuario: escucha por YouTube
+
+--- CONTENIDO DEL FLUJO 3: CONTROL DE REPRODUCCION ---
+
+LIFELINES: [Usuario] [Player.jsx] [HTML5 Audio / YT]
+
+1. Usuario click Pausa (⏸) → Player.jsx
+2. Player.jsx: togglePlay() → audio.pause() / YT.pauseVideo()
+3. Player.jsx cancela requestAnimationFrame, setIsPlaying(false)
+4. Usuario click Play (▶) → Player.jsx
+5. Player.jsx: togglePlay() → audio.play() / YT.playVideo()
+6. Player.jsx inicia raf loop, setIsPlaying(true)
+7. Usuario arrastra barra progreso → Player.jsx
+8. Player.jsx: handleSeek(e) → calcula % del click, audio.currentTime = seekTime / YT.seekTo(seekTime)
+9. Usuario sube volumen → Player.jsx
+10. Player.jsx: handleVolume() → audio.volume = val / YT.setVolume(val*100), guarda en localStorage
+
+--- CONTENIDO DEL FLUJO 4: NAVEGACION ---
+
+LIFELINES: [Usuario] [Player.jsx] [PlayerContext]
+
+1. Usuario click Siguiente (⏭) → Player.jsx
+2. Player.jsx: handleNext() → busca indice actual en queue, avanza 1 (o aleatorio si shuffle activo)
+3. Player.jsx → PlayerContext: setCurrentTrack(queue[nextIndex])
+4. PlayerContext useEffect se activa: cambia src y reproduce
+5. Usuario click Anterior (⏮) → Player.jsx
+6. Player.jsx: handlePrev() → indice - 1 (vuelve al inicio si estaba en 0)
+
+--- CONTENIDO DEL FLUJO 5: FIN DE CANCION ---
+
+LIFELINES: [HTML5 Audio] [Player.jsx] [PlayerContext]
+
+1. HTML5 Audio emite evento 'ended' → Player.jsx
+2. Player.jsx evalua repeatMode:
+   - 'one' → seek(0)
+   - 'all' → next()
+   - 'off' → stop
+3. Si shuffle: indice aleatorio
+4. Player.jsx → PlayerContext: setCurrentTrack(nextTrack)
+
+NOTA: El Player tiene dos mecanismos: HTML5 Audio (Deezer, FMA, IA, Spotify) y YouTube IFrame API (YouTube, YT Music). MusicBrainz no tiene preview (boton deshabilitado). Volumen se persiste en localStorage con clave 'reproductor_volume'. Atajo espacio para play/pausa (excepto en inputs).

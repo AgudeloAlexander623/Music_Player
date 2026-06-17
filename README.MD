@@ -1,4 +1,4 @@
-# Reproductor de Música
+# SoundWave Music
 
 Aplicación web fullstack inspirada en Spotify, construida con Node.js, React y PostgreSQL. Integra múltiples APIs públicas para buscar y reproducir música.
 

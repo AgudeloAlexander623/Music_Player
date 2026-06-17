@@ -1,7 +1,7 @@
 {
-  "name": "reproductor-musica",
+  "name": "soundwave-music",
   "version": "1.0.0-beta",
-  "description": "Spotify-inspired music app - educational project",
+  "description": "SoundWave Music — Spotify-inspired music player",
   "private": true,
   "scripts": {
     "install:all": "cd BackEnd && npm install && cd ../FrontEnd/mi-app && npm install",
