@@ -7,6 +7,7 @@ import Sidebar from './components/Sidebar';
 import PlaylistPanel from './components/PlaylistPanel';
 import Player from './components/Player';
 import Dashboard from './pages/Dashboard';
+import SearchPage from './pages/SearchPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Favorites from './pages/Favorites';
@@ -32,7 +33,6 @@ function ProtectedLayout() {
   const { user, loading } = useAuth();
   const [currentTrack, setCurrentTrack] = useState(null);
   const [queue, setQueue] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const playTrack = (track, q) => {
     setQueue(q || [track]);
@@ -64,11 +64,8 @@ function ProtectedLayout() {
   if (!user) return <Navigate to="/login" />;
 
   return (
-    <PlayerContext.Provider value={{ currentTrack, queue, playTrack, searchQuery, setSearchQuery }}>
-      <Topbar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      />
+    <PlayerContext.Provider value={{ currentTrack, queue, playTrack }}>
+      <Topbar />
       <main className="container">
         <Sidebar />
         <section className="content">
@@ -99,6 +96,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/" element={<ProtectedLayout />}>
           <Route index element={<Dashboard />} />
+          <Route path="search" element={<SearchPage />} />
           <Route path="favorites" element={<Favorites />} />
           <Route path="playlists" element={<Playlists />} />
           <Route path="profile" element={<Profile />} />

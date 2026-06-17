@@ -17,13 +17,19 @@
  *   - Disponibilidad verificada mediante health check al inicio
  */
 
+import logger from "../../utils/logger.js";
 import { searchInternetArchive, isInternetArchiveReachable } from "../internetarchive.services.js";
 
 let _available = true;
 
-isInternetArchiveReachable().then((reachable) => {
-  _available = reachable;
-});
+isInternetArchiveReachable()
+  .then((reachable) => {
+    _available = reachable;
+  })
+  .catch((error) => {
+    logger.warn("Internet Archive reachability check failed", { error: error.message });
+    _available = false;
+  });
 
 export default {
   name: "internetarchive",

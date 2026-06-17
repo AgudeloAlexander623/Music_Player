@@ -16,7 +16,7 @@ export default function Favorites() {
       const res = await api.get('/favorites');
       setFavorites(res.data.favorites || []);
     } catch {
-      toast.error('Error al cargar favoritos');
+      console.warn('Error al cargar favoritos');
     } finally {
       setLoading(false);
     }
@@ -32,7 +32,7 @@ export default function Favorites() {
       setFavorites((prev) => prev.filter((f) => f.id !== id));
       toast.success('Eliminado de favoritos');
     } catch {
-      toast.error('No se pudo eliminar el favorito');
+      console.warn('No se pudo eliminar el favorito');
     }
   };
 

@@ -57,9 +57,10 @@ export function AuthProvider({ children }) {
       localStorage.setItem('user', JSON.stringify(res.data.user));
       setUser(res.data.user);
       return res.data;
-    } catch {
+    } catch (err) {
+      console.warn('Guest API falló, usando modo invitado local:', err?.message);
       const guestUser = { guest: true };
-      localStorage.setItem('token', 'guest-token');
+      localStorage.removeItem('token');
       localStorage.setItem('user', JSON.stringify(guestUser));
       setUser(guestUser);
       return { user: guestUser };

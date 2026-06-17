@@ -97,12 +97,17 @@ psql -U reproductor_user -d reproductor_db -h localhost < BackEnd/src/db/DataBas
 
 ### 4. Instalar dependencias
 
+> **⚠️ IMPORTANTE:** Este paso es obligatorio. El proyecto no funcionará sin instalar las dependencias de cada módulo.
+
 ```bash
 # Backend
 cd BackEnd && npm install && cd ..
 
 # Frontend
 cd FrontEnd/mi-app && npm install && cd ../..
+
+# (Opcional) Servicio Python de recomendaciones
+cd python-services && pip install -r requirements.txt && cd ..
 ```
 
 ### 5. Iniciar la aplicación
@@ -238,6 +243,34 @@ Cada push ejecuta automáticamente los tres conjuntos via GitHub Actions (`.gith
 | `npm run dev` | Servidor de desarrollo Vite |
 | `npm run build` | Build para producción |
 | `npx vitest run` | Pruebas del frontend |
+
+---
+
+## Historial de cambios recientes
+
+| Fecha | Cambio | Detalle |
+|-------|--------|---------|
+| 17-jun-2026 | Búsqueda en ruta separada | Se movió la búsqueda a `/search?q=...` para evitar que los resultados desaparezcan al re-montar el Dashboard |
+| 17-jun-2026 | Crear playlist desde búsqueda | El dropdown "Agregar a playlist" ahora permite crear una playlist nueva sin salir de la búsqueda |
+| 17-jun-2026 | Correcciones CSS en resultados | Botones redimensionados, alturas mínimas, espaciado mejorado |
+| 17-jun-2026 | Manejo de errores global en backend | Middleware Express para capturar excepciones no controladas |
+
+→ Ver [`docks/cambios-17-jun-2026.md`](docks/cambios-17-jun-2026.md) para el detalle completo.
+
+---
+
+## Próximas mejoras (v2.0)
+
+- [ ] **Reproducción continua**: autoplay de canciones relacionadas al finalizar la pista actual
+- [ ] **Modo offline**: caché de resultados de búsqueda y reproducción local
+- [ ] **Cola de reproducción editable**: reordenar y eliminar tracks de la cola actual
+- [ ] **Listas colaborativas**: compartir playlists con otros usuarios
+- [ ] **Recomendaciones inteligentes**: mejorar el sistema de recomendaciones basado en historial
+- [ ] **Modo oscuro / claro**: selector de tema persistente
+- [ ] **Soporte para más APIs**: añadir soporte para SoundCloud, Apple Music, etc.
+- [ ] **Interfaz responsive mejorada**: optimización para dispositivos móviles y tablets
+- [ ] **Notificaciones push**: alertas cuando un artista favorito publique nueva música
+- [ ] **Internacionalización (i18n)**: soporte multi-idioma
 
 ---
 

@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { navigate } from './navigate.js';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL
@@ -22,8 +21,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      console.warn('[API] 401 no autorizado. Token inválido o expirado.');
       localStorage.removeItem('token');
-      navigate('/login');
     }
     return Promise.reject(error);
   }

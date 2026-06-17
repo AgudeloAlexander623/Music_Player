@@ -10,7 +10,11 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
   const [playlistMenuId, setPlaylistMenuId] = useState(null);
   const [userPlaylists, setUserPlaylists] = useState([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
+  const [showNewPlaylistInput, setShowNewPlaylistInput] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [creatingPlaylist, setCreatingPlaylist] = useState(false);
   const menuRef = useRef(null);
+  const newPlaylistInputRef = useRef(null);
   const { isGuest } = useAuth();
   const toast = useToast();
 
@@ -20,7 +24,7 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
       const res = await api.get('/playlists');
       setUserPlaylists(res.data.playlists || []);
     } catch {
-      toast.error('No se pudieron cargar las playlists');
+      console.warn('No se pudieron cargar las playlists');
     } finally {
       setLoadingPlaylists(false);
     }
@@ -33,7 +37,11 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
   }, [playlistMenuId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!playlistMenuId) return;
+    if (!playlistMenuId) {
+      setShowNewPlaylistInput(false);
+      setNewPlaylistName('');
+      return;
+    }
     const handler = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setPlaylistMenuId(null);
@@ -42,6 +50,12 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [playlistMenuId]);
+
+  useEffect(() => {
+    if (showNewPlaylistInput && newPlaylistInputRef.current) {
+      newPlaylistInputRef.current.focus();
+    }
+  }, [showNewPlaylistInput]);
 
   const handleAddToPlaylist = async (track, playlistId) => {
     try {
@@ -56,9 +70,28 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
       });
       toast.success('Agregado a la playlist');
     } catch {
-      toast.error('No se pudo agregar a la playlist');
+      console.warn('No se pudo agregar a la playlist');
     }
     setPlaylistMenuId(null);
+  };
+
+  const handleCreateAndAdd = async (track) => {
+    if (!newPlaylistName.trim()) return;
+    setCreatingPlaylist(true);
+    try {
+      const res = await api.post('/playlists', { name: newPlaylistName.trim() });
+      const newPlaylist = res.data.playlist;
+      await handleAddToPlaylist(track, newPlaylist.id);
+      setUserPlaylists((prev) => [...prev, newPlaylist]);
+      toast.success(`Playlist "${newPlaylistName.trim()}" creada`);
+    } catch {
+      console.warn('No se pudo crear la playlist');
+      toast.error('Error al crear la playlist');
+    } finally {
+      setCreatingPlaylist(false);
+      setShowNewPlaylistInput(false);
+      setNewPlaylistName('');
+    }
   };
 
   const handlePlaylistClick = (trackId) => {
@@ -174,7 +207,7 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
                   <div className="playlist-dropdown-menu" ref={menuRef}>
                     {loadingPlaylists ? (
                       <span className="dropdown-loading">Cargando...</span>
-                    ) : userPlaylists.length === 0 ? (
+                    ) : userPlaylists.length === 0 && !showNewPlaylistInput ? (
                       <span className="dropdown-empty">Sin playlists</span>
                     ) : (
                       userPlaylists.map((pl) => (
@@ -186,6 +219,36 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
                           {pl.name}
                         </button>
                       ))
+                    )}
+                    {showNewPlaylistInput ? (
+                      <form
+                        className="dropdown-new-form"
+                        onSubmit={(e) => { e.preventDefault(); handleCreateAndAdd(track); }}
+                      >
+                        <input
+                          ref={newPlaylistInputRef}
+                          type="text"
+                          className="dropdown-new-input"
+                          placeholder="Nombre de la playlist"
+                          value={newPlaylistName}
+                          onChange={(e) => setNewPlaylistName(e.target.value)}
+                          disabled={creatingPlaylist}
+                        />
+                        <button
+                          type="submit"
+                          className="dropdown-new-btn"
+                          disabled={creatingPlaylist || !newPlaylistName.trim()}
+                        >
+                          {creatingPlaylist ? 'Creando...' : 'Crear y agregar'}
+                        </button>
+                      </form>
+                    ) : (
+                      <button
+                        className="dropdown-new-playlist"
+                        onClick={() => setShowNewPlaylistInput(true)}
+                      >
+                        + Crear nueva playlist
+                      </button>
                     )}
                   </div>
                 )}

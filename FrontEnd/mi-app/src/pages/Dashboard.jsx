@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { usePlayer } from '../App';
 import ContentSection from '../components/ContentSection';
-import SearchResults from '../components/SearchResults';
 import api from '../services/api';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
@@ -10,16 +9,11 @@ import { getAllEnabled } from '../utils/pluginStorage';
 import './Dashboard.css';
 
 export default function Dashboard() {
-  const { searchQuery, setSearchQuery, playTrack } = usePlayer();
+  const { playTrack } = usePlayer();
   const [topPlaylists, setTopPlaylists] = useState([]);
   const [topArtists, setTopArtists] = useState([]);
   const [topAlbums, setTopAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchResults, setSearchResults] = useState([]);
-
-  const [Searching, setSearching] = useState(false);
-  
-  const [searched, setSearched] = useState(false);
   const [playlistFilter, setPlaylistFilter] = useState('');
   const [artistFilter, setArtistFilter] = useState('');
   const [albumFilter, setAlbumFilter] = useState('');
@@ -41,120 +35,70 @@ export default function Dashboard() {
     return url;
   };
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      const [playlistRes, tracksRes, albumRes] = await Promise.all([
-        api.get('/playlists'),
-        api.get(buildSearchUrl('popular')),
-        api.get(buildSearchUrl('album')),
-      ]);
-
-      setTopPlaylists(playlistRes.data.playlists?.slice(0, 10) || []);
-
-      const uniqueArtists = [];
-      const seenArtists = new Set();
-      if (tracksRes.data.tracks) {
-        tracksRes.data.tracks.forEach((track) => {
-          if (track.artist && !seenArtists.has(track.artist)) {
-            seenArtists.add(track.artist);
-            uniqueArtists.push({
-              id: track.artist,
-              name: track.artist,
-              image: track.albumImage || 'https://via.placeholder.com/180',
-              previewUrl: track.previewUrl,
-            });
-          }
-        });
-      }
-      setTopArtists(uniqueArtists.slice(0, 10));
-
-      const uniqueAlbums = [];
-      const seenAlbums = new Set();
-      if (albumRes.data.tracks) {
-        albumRes.data.tracks.forEach((track) => {
-          const albumKey = track.album;
-          if (albumKey && !seenAlbums.has(albumKey)) {
-            seenAlbums.add(albumKey);
-            uniqueAlbums.push({
-              id: albumKey,
-              name: track.album,
-              subtitle: track.artist,
-              image: track.albumImage || 'https://via.placeholder.com/180',
-              previewUrl: track.previewUrl,
-            });
-          }
-        });
-      }
-      setTopAlbums(uniqueAlbums.slice(0, 10));
-    } catch (err) {
-      console.error('Error cargando dashboard:', err);
-      toast.error('Error cargando datos del dashboard');
-    } finally {
-      setLoading(false);
-    }
-  };
-
- const handleSearch = async () => {
-  const trimmedQuery = searchQuery.trim();
-  
-  // Validación única
-  if (!trimmedQuery || trimmedQuery.length < 2) return;
-
-  setSearching(true);
-  setSearchResults([]); // Limpiar resultados previos
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-  
-  try {
-    const res = await api.get(buildSearchUrl(trimmedQuery), {
-      signal: controller.signal,
-    });
-    setSearchResults(res.data.tracks || []);
-    setSearched(true); // Solo si es exitoso
-  } catch (err) {
-    setSearchResults([]);
-    setSearched(false); // Reset si falla
-    
-    // Manejo granular de errores
-    if (err.name === 'AbortError') {
-      toast.error('La búsqueda tardó demasiado');
-    } else if (err.response?.status === 404) {
-      toast.error('No se encontraron resultados');
-    } else if (err.response?.status >= 500) {
-      toast.error('Error del servidor. Intenta más tarde');
-    } else {
-      toast.error('Error en la búsqueda. Verifica tu conexión');
-    }
-    console.error('Error en búsqueda:', err);
-  } finally {
-    setSearching(false);
-    clearTimeout(timeoutId);
-  }
-};
-
   useEffect(() => {
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      try {
+        const [playlistRes, tracksRes, albumRes] = await Promise.allSettled([
+          api.get('/playlists'),
+          api.get(buildSearchUrl('popular')),
+          api.get(buildSearchUrl('album')),
+        ]);
+
+        if (playlistRes.status === 'fulfilled') {
+          setTopPlaylists(playlistRes.value.data.playlists?.slice(0, 10) || []);
+        } else {
+          console.warn('Error cargando playlists:', playlistRes.reason);
+        }
+
+        const uniqueArtists = [];
+        const seenArtists = new Set();
+        if (tracksRes.status === 'fulfilled' && tracksRes.value.data.tracks) {
+          tracksRes.value.data.tracks.forEach((track) => {
+            if (track.artist && !seenArtists.has(track.artist)) {
+              seenArtists.add(track.artist);
+              uniqueArtists.push({
+                id: track.artist,
+                name: track.artist,
+                image: track.albumImage || 'https://via.placeholder.com/180',
+                previewUrl: track.previewUrl,
+              });
+            }
+          });
+        }
+        setTopArtists(uniqueArtists.slice(0, 10));
+
+        const uniqueAlbums = [];
+        const seenAlbums = new Set();
+        if (albumRes.status === 'fulfilled' && albumRes.value.data.tracks) {
+          albumRes.value.data.tracks.forEach((track) => {
+            const albumKey = track.album;
+            if (albumKey && !seenAlbums.has(albumKey)) {
+              seenAlbums.add(albumKey);
+              uniqueAlbums.push({
+                id: albumKey,
+                name: track.album,
+                subtitle: track.artist,
+                image: track.albumImage || 'https://via.placeholder.com/180',
+                previewUrl: track.previewUrl,
+              });
+            }
+          });
+        }
+        setTopAlbums(uniqueAlbums.slice(0, 10));
+      } catch (err) {
+        console.error('Error inesperado cargando dashboard:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (!allDisabled) {
       fetchDashboardData();
     } else {
       setLoading(false);
     }
   }, [allDisabled, sourcesParam]);
-
-  useEffect(() => {
-    if (allDisabled) return;
-    if (searchQuery.length >= 2) {
-      handleSearch();
-    } else if (searchQuery.length === 0) {
-      setSearched(false);
-      setSearchResults([]);
-    }
-  }, [searchQuery, allDisabled, handleSearch]);
-
-  const handlePlaySearchResult = (track) => {
-    playTrack(track, searchResults);
-  };
 
   const handlePlayItem = (item, type) => {
     const newTrack = {
@@ -186,7 +130,7 @@ export default function Dashboard() {
       });
       toast.success('Agregado a favoritos');
     } catch {
-      toast.error('No se pudo agregar a favoritos');
+      console.warn('No se pudo agregar a favoritos');
     }
   };
 
@@ -219,66 +163,46 @@ export default function Dashboard() {
         </div>
       )}
 
-      {searched && (
-        <div className="dashboard-search-results">
-          <div className="search-results-header">
-            <h2>Results for "{searchQuery}"</h2>
-            <button className="back-btn" onClick={() => { setSearched(false); setSearchQuery(''); }}>
-              Volver
-            </button>
-          </div>
-          <SearchResults
-            results={searchResults}
-            onPlay={handlePlaySearchResult}
-            onAddFavorite={handleAddFavorite}
-          />
+      <div className="playlist-header">
+        <h2>Top Playlists</h2>
+        <div className="filters">
+          <button className="scroll-btn" onClick={() => document.querySelector('.items-container')?.scrollBy({ left: -400, behavior: 'smooth' })}>◀</button>
+          <select value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value)}>
+            <option value="All">All</option>
+            <option value="Rock">Rock</option>
+            <option value="Pop">Pop</option>
+            <option value="Electronic">Electronic</option>
+          </select>
+          <button className="scroll-btn" onClick={() => document.querySelector('.items-container')?.scrollBy({ left: 400, behavior: 'smooth' })}>▶</button>
         </div>
-      )}
+      </div>
 
-      {!searched && (
-        <>
-          <div className="playlist-header">
-            <h2>Top Playlists</h2>
-            <div className="filters">
-              <button className="scroll-btn" onClick={() => document.querySelector('.items-container')?.scrollBy({ left: -400, behavior: 'smooth' })}>◀</button>
-              <select value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value)}>
-                <option value="All">All</option>
-                <option value="Rock">Rock</option>
-                <option value="Pop">Pop</option>
-                <option value="Electronic">Electronic</option>
-              </select>
-              <button className="scroll-btn" onClick={() => document.querySelector('.items-container')?.scrollBy({ left: 400, behavior: 'smooth' })}>▶</button>
-            </div>
-          </div>
+      <ContentSection
+        title="Top Playlists"
+        items={filteredPlaylists}
+        badge="Descubrir"
+        onFilter={setPlaylistFilter}
+        filterValue={playlistFilter}
+        onPlay={(item) => handlePlayItem(item, 'playlist')}
+      />
 
-          <ContentSection
-            title="Top Playlists"
-            items={filteredPlaylists}
-            badge="Descubrir"
-            onFilter={setPlaylistFilter}
-            filterValue={playlistFilter}
-            onPlay={(item) => handlePlayItem(item, 'playlist')}
-          />
+      <ContentSection
+        title="Artistas Populares"
+        items={filteredArtists}
+        badge="Descubrir"
+        onFilter={setArtistFilter}
+        filterValue={artistFilter}
+        onPlay={(item) => handlePlayItem(item, 'artist')}
+      />
 
-          <ContentSection
-            title="Artistas Populares"
-            items={filteredArtists}
-            badge="Descubrir"
-            onFilter={setArtistFilter}
-            filterValue={artistFilter}
-            onPlay={(item) => handlePlayItem(item, 'artist')}
-          />
-
-          <ContentSection
-            title="Álbumes"
-            items={filteredAlbums}
-            badge="Descubrir"
-            onFilter={setAlbumFilter}
-            filterValue={albumFilter}
-            onPlay={(item) => handlePlayItem(item, 'album')}
-          />
-        </>
-      )}
+      <ContentSection
+        title="Álbumes"
+        items={filteredAlbums}
+        badge="Descubrir"
+        onFilter={setAlbumFilter}
+        filterValue={albumFilter}
+        onPlay={(item) => handlePlayItem(item, 'album')}
+      />
     </>
   );
 }

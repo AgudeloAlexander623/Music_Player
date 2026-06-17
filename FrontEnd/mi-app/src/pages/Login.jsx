@@ -21,7 +21,7 @@ export default function Login() {
       toast.success('Sesión iniciada');
       navigate('/');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Error al iniciar sesión');
+      console.error('Error al iniciar sesión:', err?.response?.data?.error || err.message);
     } finally {
       setLoading(false);
     }
@@ -33,8 +33,8 @@ export default function Login() {
       await guestLogin();
       toast.info('Explorando como invitado');
       navigate('/');
-    } catch {
-      toast.error('No se pudo iniciar sesión como invitado');
+    } catch (err) {
+      console.error('Error al iniciar sesión como invitado:', err?.message);
     } finally {
       setGuestLoading(false);
     }

@@ -23,7 +23,7 @@ export default function Playlists() {
       const res = await api.get('/playlists');
       setPlaylists(res.data.playlists || []);
     } catch {
-      toast.error('Error al cargar playlists');
+      console.warn('Error al cargar playlists');
     } finally {
       setLoading(false);
     }
@@ -44,7 +44,7 @@ export default function Playlists() {
       toast.success('Playlist creada');
       await loadPlaylists();
     } catch {
-      toast.error('No se pudo crear la playlist');
+      console.warn('No se pudo crear la playlist');
     } finally {
       setCreating(false);
     }
@@ -57,7 +57,7 @@ export default function Playlists() {
       toast.success('Playlist eliminada');
       await loadPlaylists();
     } catch {
-      toast.error('No se pudo eliminar la playlist');
+      console.warn('No se pudo eliminar la playlist');
     }
   };
 
@@ -81,7 +81,7 @@ export default function Playlists() {
       setEditingId(null);
       await loadPlaylists();
     } catch {
-      toast.error('No se pudo actualizar la playlist');
+      console.warn('No se pudo actualizar la playlist');
     }
   };
 
@@ -96,7 +96,7 @@ export default function Playlists() {
       setTracks(res.data.tracks || []);
       setExpandedId(id);
     } catch {
-      toast.error('Error al cargar tracks');
+      console.warn('Error al cargar tracks');
     }
   };
 
@@ -128,7 +128,7 @@ export default function Playlists() {
       setTracks((prev) => prev.filter((t) => t.id !== trackId));
       toast.success('Track eliminado');
     } catch {
-      toast.error('No se pudo eliminar el track');
+      console.warn('No se pudo eliminar el track');
     }
   };
 

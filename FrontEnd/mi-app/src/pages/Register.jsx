@@ -17,15 +17,15 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (username.trim().length < 3) {
-      toast.error('El nombre de usuario debe tener al menos 3 caracteres');
+      console.warn('El nombre de usuario debe tener al menos 3 caracteres');
       return;
     }
     if (password !== confirmPassword) {
-      toast.error('Las contraseñas no coinciden');
+      console.warn('Las contraseñas no coinciden');
       return;
     }
     if (password.length < 6) {
-      toast.error('La contraseña debe tener al menos 6 caracteres');
+      console.warn('La contraseña debe tener al menos 6 caracteres');
       return;
     }
     setLoading(true);
@@ -34,7 +34,7 @@ export default function Register() {
       toast.success('Cuenta creada exitosamente');
       navigate('/');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Error al registrarse');
+      console.error('Error al registrarse:', err?.response?.data?.error || err.message);
     } finally {
       setLoading(false);
     }

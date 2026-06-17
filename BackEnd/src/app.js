@@ -36,6 +36,14 @@ app.use("/api/favorites", favoritesRoutes);
 app.use("/api/playlists", playlistsRoutes);
 app.use("/api/recommendations", recommendationsRoutes);
 
+app.use((err, _req, res, _next) => {
+  logger.error("Error no manejado", { error: err.message, stack: err.stack });
+  res.status(err.statusCode || 500).json({
+    error: err.name || "Internal server error",
+    details: err.message || "Ocurrió un error inesperado",
+  });
+});
+
 const PORT = process.env.PORT || 4000;
 
 async function start() {
