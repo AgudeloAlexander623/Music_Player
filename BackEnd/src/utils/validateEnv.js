@@ -29,14 +29,13 @@ const REQUIRED_VARS = {
   JWT_SECRET: 'JWT secret para firmar tokens (genera con: openssl rand -base64 32)',
 };
 
-const RECOMMENDED_VARS = {
-  YOUTUBE_API_KEY: 'API Key de YouTube Data API v3. Sin ella se usa Invidious como fallback.',
-};
-
 const OPTIONAL_VARS = {
+  CORS_ORIGINS: 'Orígenes permitidos separados por coma (ej: http://localhost:5173,https://midominio.com). Por defecto: http://localhost:5173,http://localhost:4000',
   SPOTIFY_CLIENT_ID: 'Client ID de Spotify (necesario para buscar en Spotify)',
   SPOTIFY_CLIENT_SECRET: 'Client Secret de Spotify (necesario para buscar en Spotify)',
   FMA_API_KEY: 'API Key de Free Music Archive (necesario para buscar en FMA)',
+  JAMENDO_CLIENT_ID: 'Client ID de Jamendo (necesario para buscar en Jamendo)',
+  SOUNDCLOUD_CLIENT_ID: 'Client ID de SoundCloud (necesario para buscar en SoundCloud)',
 };
 
 export function validateEnv() {

@@ -26,7 +26,7 @@ router.post("/configure", async (req, res) => {
       return res.json({ success: true });
     }
     return res.status(400).json(result);
-  } catch (error) {
+  } catch {
     return res
       .status(500)
       .json({ success: false, error: "Internal server error" });
@@ -34,17 +34,3 @@ router.post("/configure", async (req, res) => {
 });
 
 export default router;
-
-
-
-
-// Jamendo API Example
-const response = await fetch('https://developer.jamendo.com/v3.0/docs', {
-  method: 'GET',
-  headers: {
-      'Content-Type': 'application/json'
-  }
-});
-
-const data = await response.json();
-console.log(data);

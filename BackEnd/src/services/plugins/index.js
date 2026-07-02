@@ -6,6 +6,7 @@ import youtubeMusicPlugin from './youtube_music.plugin.js';
 import musicbrainzPlugin from './musicbrainz.plugin.js';
 import fmaPlugin from './fma.plugin.js';
 import internetarchivePlugin from './internetarchive.plugin.js';
+import audiusPlugin from './audius.plugin.js';
 
 const registry = new PluginRegistry();
 
@@ -16,6 +17,7 @@ registry.register(youtubeMusicPlugin);
 registry.register(musicbrainzPlugin);
 registry.register(fmaPlugin);
 registry.register(internetarchivePlugin);
+registry.register(audiusPlugin);
 
 export default registry;
 export { PluginRegistry };

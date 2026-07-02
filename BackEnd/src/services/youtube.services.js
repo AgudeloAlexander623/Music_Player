@@ -137,7 +137,7 @@ async function searchYouTubeAPI(query, limit) {
 
   const videoIds = searchResponse.data.items.map(v => v.id?.videoId).filter(Boolean);
 
-  let durationMap = {};
+  const durationMap = {};
   if (videoIds.length > 0) {
     try {
       const detailsResponse = await axios.get('https://www.googleapis.com/youtube/v3/videos', {

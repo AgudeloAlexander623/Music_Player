@@ -17,7 +17,7 @@ export default {
   isAvailable() {
     return false;
   },
-  search(query, { limit = 10, page = 1 } = {}) {
+  search(query, { limit: _limit = 10, page: _page = 1 } = {}) {
     return Promise.resolve([]);
   },
 };

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import pg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';

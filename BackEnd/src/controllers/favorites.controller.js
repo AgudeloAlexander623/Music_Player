@@ -2,113 +2,70 @@
  * CONTROLADOR DE FAVORITOS
  *
  * Maneja los endpoints REST de favoritos:
- * - POST /api/favorites - Agregar canción a favoritos
- * - GET /api/favorites - Obtener favoritos del usuario
- * - DELETE /api/favorites/:id - Eliminar favorito específico
+ * - POST   /api/favorites      - Agregar canción a favoritos
+ * - GET    /api/favorites      - Obtener favoritos del usuario
+ * - DELETE /api/favorites/:id  - Eliminar favorito específico
  *
- * INTEGRACIÓN CON BD:
- * - Usa MySQL para almacenar favoritos
- * - Valida propiedad del usuario con JWT
- * - Previene duplicados con unique key
+ * Validación de datos con Zod, errores centralizados.
  */
 
 import logger from '../utils/logger.js';
 import { insert, findMany, remove, findOne } from '../db/database.js';
-
-class FavoritesControllerError extends Error {
-  constructor(message, statusCode) {
-    super(message);
-    this.name = 'FavoritesControllerError';
-    this.statusCode = statusCode;
-  }
-}
+import { ValidationError, NotFoundError, ForbiddenError, ConflictError, AppError } from '../utils/errors.js';
+import { validate, addFavoriteSchema } from '../utils/validation.js';
 
 /**
  * ENDPOINT: AGREGAR FAVORITO
  *
  * POST /api/favorites
  * Headers: Authorization: Bearer <token>
- * Body: {
- *   external_track_id: "spotify:track:123",
- *   source: "spotify" | "musicbrainz",
- *   track_title: "Song Name",
- *   artist: "Artist Name",
- *   album: "Album Name",
- *   preview_url: "https://..." (opcional)
- * }
+ * Body: { external_track_id, source, track_title, artist?, album?, album_image?, preview_url? }
  *
- * RESPUESTA EXITOSA (201):
- * {
- *   success: true,
- *   message: "Track added to favorites",
- *   favorite: { id: 1, ... }
- * }
- *
- * ERRORES:
- * - 400: Datos faltantes o inválidos
- * - 409: Canción ya está en favoritos
- * - 401: No autorizado (sin token)
- * - 500: Error servidor
+ * RESPUESTA EXITOSA (201): { success, message, favorite }
  */
 export const addFavorite = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { external_track_id, source, track_title, artist, album, album_image, preview_url } = req.body;
+    const data = validate(addFavoriteSchema, req.body);
 
-    // Validar campos requeridos
-    if (!external_track_id || !source || !track_title) {
-      throw new FavoritesControllerError('Missing required fields: external_track_id, source, track_title', 400);
-    }
-
-    // Validar source
-    if (!['spotify', 'musicbrainz', 'fma', 'youtube', 'youtube-music', 'deezer'].includes(source)) {
-      throw new FavoritesControllerError('Invalid source', 400);
-    }
-
-    // Verificar si ya existe el favorito
     const existing = await findOne('favorite_tracks', {
       user_id: userId,
-      external_track_id,
-      source
+      external_track_id: data.external_track_id,
+      source: data.source,
     });
 
     if (existing) {
-      throw new FavoritesControllerError('Track already in favorites', 409);
+      throw new ConflictError('Track already in favorites');
     }
 
-    // Insertar nuevo favorito
     const result = await insert('favorite_tracks', {
       user_id: userId,
-      external_track_id,
-      source,
-      track_title,
-      artist: artist || null,
-      album: album || null,
-      album_image: album_image || null,
-      preview_url: preview_url || null
+      external_track_id: data.external_track_id,
+      source: data.source,
+      track_title: data.track_title,
+      artist: data.artist || null,
+      album: data.album || null,
+      album_image: data.album_image || null,
+      preview_url: data.preview_url || null,
     });
 
-    // Obtener el favorito insertado
     const favorite = await findOne('favorite_tracks', { id: result.insertId });
 
     res.status(201).json({
       success: true,
       message: 'Track added to favorites',
-      favorite
+      favorite,
     });
-
   } catch (error) {
     logger.error('Error agregando favorito', { error: error.message });
 
-    if (error instanceof FavoritesControllerError) {
-      return res.status(error.statusCode).json({
-        error: error.message
-      });
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
     }
 
     res.status(500).json({
       error: 'Internal server error',
-      details: error.message
+      details: error.message,
     });
   }
 };
@@ -119,46 +76,20 @@ export const addFavorite = async (req, res) => {
  * GET /api/favorites
  * Headers: Authorization: Bearer <token>
  *
- * RESPUESTA EXITOSA (200):
- * {
- *   success: true,
- *   favorites: [
- *     {
- *       id: 1,
- *       external_track_id: "spotify:track:123",
- *       source: "spotify",
- *       track_title: "Song Name",
- *       artist: "Artist Name",
- *       album: "Album Name",
- *       preview_url: "https://...",
- *       added_at: "2026-04-30T10:00:00.000Z"
- *     },
- *     ...
- *   ]
- * }
- *
- * ERRORES:
- * - 401: No autorizado (sin token)
- * - 500: Error servidor
+ * RESPUESTA EXITOSA (200): { success, favorites }
  */
 export const getFavorites = async (req, res) => {
   try {
     const userId = req.user.userId;
-
-    // Obtener todos los favoritos del usuario
     const favorites = await findMany('favorite_tracks', { user_id: userId });
 
-    res.json({
-      success: true,
-      favorites
-    });
-
+    res.json({ success: true, favorites });
   } catch (error) {
     logger.error('Error obteniendo favoritos', { error: error.message });
 
     res.status(500).json({
       error: 'Internal server error',
-      details: error.message
+      details: error.message,
     });
   }
 };
@@ -169,60 +100,43 @@ export const getFavorites = async (req, res) => {
  * DELETE /api/favorites/:id
  * Headers: Authorization: Bearer <token>
  *
- * RESPUESTA EXITOSA (200):
- * {
- *   success: true,
- *   message: "Track removed from favorites"
- * }
- *
- * ERRORES:
- * - 400: ID inválido
- * - 404: Favorito no encontrado
- * - 403: No autorizado (favorito pertenece a otro usuario)
- * - 401: No autorizado (sin token)
- * - 500: Error servidor
+ * RESPUESTA EXITOSA (200): { success, message }
  */
 export const removeFavorite = async (req, res) => {
   try {
     const userId = req.user.userId;
     const favoriteId = parseInt(req.params.id);
 
-    // Validar ID
     if (isNaN(favoriteId)) {
-      throw new FavoritesControllerError('Invalid favorite ID', 400);
+      throw new ValidationError('Invalid favorite ID');
     }
 
-    // Verificar que el favorito existe y pertenece al usuario
     const favorite = await findOne('favorite_tracks', { id: favoriteId });
 
     if (!favorite) {
-      throw new FavoritesControllerError('Favorite not found', 404);
+      throw new NotFoundError('Favorite not found');
     }
 
     if (favorite.user_id !== userId) {
-      throw new FavoritesControllerError('Forbidden: Favorite belongs to another user', 403);
+      throw new ForbiddenError('Favorite belongs to another user');
     }
 
-    // Eliminar favorito
     await remove('favorite_tracks', { id: favoriteId });
 
     res.json({
       success: true,
-      message: 'Track removed from favorites'
+      message: 'Track removed from favorites',
     });
-
   } catch (error) {
     logger.error('Error eliminando favorito', { error: error.message });
 
-    if (error instanceof FavoritesControllerError) {
-      return res.status(error.statusCode).json({
-        error: error.message
-      });
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
     }
 
     res.status(500).json({
       error: 'Internal server error',
-      details: error.message
+      details: error.message,
     });
   }
 };

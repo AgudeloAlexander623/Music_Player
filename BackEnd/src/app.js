@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -22,8 +24,35 @@ validateEnv();
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+const corsOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
+  : ['http://localhost:5173', 'http://localhost:4000'];
+
+app.use(cors({
+  origin: corsOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
+app.disable('x-powered-by');
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: 'Demasiadas solicitudes. Intenta de nuevo en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(globalLimiter);
+
+app.use(express.json({ limit: '1mb' }));
 
 app.get("/api/health", (_req, res) => {
   res.status(200).json({ status: "ok", service: "backend" });

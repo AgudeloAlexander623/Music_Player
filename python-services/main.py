@@ -2,11 +2,18 @@ import logging
 import time
 import random
 import re
+import os
 from collections import Counter
-from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from catalog import CATALOG, ARTIST_SIMILARITY, GENRE_CLUSTERS
 
 logging.basicConfig(
@@ -15,14 +22,42 @@ logging.basicConfig(
 )
 log = logging.getLogger("reproductor-python")
 
-app = FastAPI(title="Reproductor Python Services", version="0.1.0-beta")
+# ── Seguridad: orígenes CORS ──
+
+_cors_origins_env = os.getenv("CORS_ORIGINS", "")
+CORS_ORIGINS = (
+    [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+    if _cors_origins_env
+    else ["http://localhost:5173", "http://localhost:4000"]
+)
+
+# ── Seguridad: rate limiting ──
+
+limiter = Limiter(key_func=get_remote_address)
+
+app = FastAPI(
+    title="Reproductor Python Services",
+    version="0.1.0-beta",
+)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ── Seguridad: CORS restringido ──
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
+)
+
+# ── Seguridad: validar Host header ──
+
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=os.getenv("TRUSTED_HOSTS", "localhost,127.0.0.1").split(","),
 )
 
 # ── Models ──
@@ -341,10 +376,26 @@ def get_genres() -> list[dict]:
     )
 
 
+# ── Middleware: Security Headers ──
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    return response
+
+
 # ── Routes ──
 
 @app.get("/")
-def root():
+@limiter.limit("30/minute")
+def root(request: Request):
     """Health-check endpoint that also exposes basic service metadata."""
     return {
         "service": "Reproductor Python Services",
@@ -356,7 +407,8 @@ def root():
 
 
 @app.post("/recommend", response_model=RecommendResponse)
-def recommend(data: RecommendRequest):
+@limiter.limit("20/minute")
+def recommend(request: Request, data: RecommendRequest):
     """Returns track recommendations based on a list of input tracks.
 
     Accepts a JSON body with:
@@ -381,7 +433,8 @@ def recommend(data: RecommendRequest):
 
 
 @app.get("/recommend/popular")
-def popular(count: int = 10):
+@limiter.limit("20/minute")
+def popular(request: Request, count: int = 10):
     """Returns a random set of popular tracks, useful for cold-start."""
     try:
         actual_count = max(1, min(count, 50))
@@ -401,7 +454,8 @@ def popular(count: int = 10):
 
 
 @app.get("/catalog")
-def get_catalog():
+@limiter.limit("30/minute")
+def get_catalog(request: Request):
     """Returns every track in the catalog. Useful for debugging or client-side caching."""
     return {
         "total": len(CATALOG),
@@ -410,7 +464,8 @@ def get_catalog():
 
 
 @app.get("/catalog/genres")
-def catalog_genres():
+@limiter.limit("60/minute")
+def catalog_genres(request: Request):
     """Returns all unique genres present in the catalog, sorted by popularity."""
     return {
         "total": len(get_genres()),
@@ -419,7 +474,8 @@ def catalog_genres():
 
 
 @app.get("/catalog/artist/{artist_name}")
-def catalog_by_artist(artist_name: str):
+@limiter.limit("30/minute")
+def catalog_by_artist(request: Request, artist_name: str):
     """Returns all catalog tracks by the given artist (case-insensitive).
 
     Raises 404 if the artist is not found.
@@ -436,7 +492,8 @@ def catalog_by_artist(artist_name: str):
 
 
 @app.get("/catalog/genre/{genre_name}")
-def catalog_by_genre(genre_name: str):
+@limiter.limit("30/minute")
+def catalog_by_genre(request: Request, genre_name: str):
     """Returns all catalog tracks whose genre matches the given name (case-insensitive).
 
     Raises 404 if no tracks match. The error includes the list of available genres.
@@ -456,7 +513,8 @@ def catalog_by_genre(genre_name: str):
 
 
 @app.get("/catalog/search")
-def search_catalog(query: str):
+@limiter.limit("30/minute")
+def search_catalog(request: Request, query: str):
     """Full-text search over track names and artists.
 
     Matches if the query appears anywhere in the name or artist field
@@ -479,7 +537,8 @@ def search_catalog(query: str):
 
 
 @app.get("/catalog/{id}")
-def get_catalog_by_id(id: str):
+@limiter.limit("30/minute")
+def get_catalog_by_id(request: Request, id: str):
     """Returns a single catalog track by its unique ID.
 
     Raises 404 if the ID does not exist.
@@ -491,7 +550,8 @@ def get_catalog_by_id(id: str):
 
 
 @app.get("/health")
-def health():
+@limiter.limit("60/minute")
+def health(request: Request):
     """Simple health-check endpoint for monitoring and orchestration."""
     return HealthResponse(
         status="ok",

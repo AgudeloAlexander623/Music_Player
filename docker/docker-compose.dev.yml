@@ -61,8 +61,9 @@ services:
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - FMA_API_KEY=${FMA_API_KEY}
-      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_key_reproductor_2026}
+      - JWT_SECRET=${JWT_SECRET}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:4000}
       - DB_PORT=5432
       - PYTHON_SERVICE_URL=http://python-service:8000
     ports:
@@ -107,6 +108,9 @@ services:
       dockerfile: ../docker/Dockerfile.python
     container_name: reproductor-python-dev
     restart: unless-stopped
+    environment:
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:4000}
+      - TRUSTED_HOSTS=${TRUSTED_HOSTS:-localhost,127.0.0.1,python-service}
     ports:
       - "${PYTHON_PORT:-8000}:8000"
     volumes:

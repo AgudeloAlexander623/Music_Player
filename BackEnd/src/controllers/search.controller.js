@@ -1,41 +1,54 @@
+/**
+ * CONTROLADOR DE BÚSQUEDA
+ *
+ * Orquesta la búsqueda en múltiples fuentes mediante PluginRegistry.
+ * - Valida query y paginación
+ * - Ejecuta búsqueda concurrente en todos los plugins disponibles
+ * - Fusiona y deduplica resultados con mergeResults
+ * - Guarda historial de búsqueda para usuarios autenticados
+ */
+
 import logger from '../utils/logger.js';
 import pluginRegistry from '../services/plugins/index.js';
 import { mergeResults } from '../utils/mergeResults.js';
 import { insert } from '../db/database.js';
+import { AppError } from '../utils/errors.js';
+import { validate, searchQuerySchema } from '../utils/validation.js';
 
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 50;
 
+/**
+ * Parsea y valida los parámetros de paginación.
+ * @param {{ page?: string, limit?: string }} query
+ * @returns {{ page: number, limit: number }}
+ */
+function parsePagination(query) {
+  const page = Math.max(1, parseInt(query.page) || 1);
+  const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(query.limit) || DEFAULT_LIMIT));
+  return { page, limit };
+}
+
+/**
+ * ENDPOINT: BÚSQUEDA MULTIFUENTE
+ *
+ * GET /api/search?q=<query>&page=1&limit=10&sources=deezer,youtube
+ *
+ * RESPUESTA EXITOSA (200): { tracks, count, pagination, sources }
+ * RESPUESTA PARCIAL (206): Igual pero con warnings si alguna fuente falló
+ */
 export const searchController = async (req, res) => {
   try {
-    const query = req.query.q;
+    const { q: query } = validate(searchQuerySchema, { q: req.query.q });
 
-    if (!query) {
-      return res.status(400).json({
-        error: "Query required",
-        details: "The 'q' parameter is mandatory",
-      });
-    }
-
-    if (query.trim().length < 2) {
-      return res.status(400).json({
-        error: "Query too short",
-        details: "Query must be at least 2 characters long",
-      });
-    }
-
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(
-      MAX_LIMIT,
-      Math.max(1, parseInt(req.query.limit) || DEFAULT_LIMIT)
-    );
+    const { page, limit } = parsePagination(req.query);
 
     const availablePlugins = pluginRegistry.getAvailable();
 
     if (availablePlugins.length === 0) {
-      return res.status(500).json({
-        error: "No search plugins are available",
-        details: "All search services are disabled due to missing configuration",
+      return res.status(503).json({
+        error: 'No search plugins are available',
+        details: 'All search services are disabled due to missing configuration',
       });
     }
 
@@ -47,7 +60,11 @@ export const searchController = async (req, res) => {
         .filter(Boolean);
     }
 
-    const { results, errors } = await pluginRegistry.searchAll(query, { limit, page, plugins: sources });
+    const { results, errors } = await pluginRegistry.searchAll(query, {
+      limit,
+      page,
+      plugins: sources,
+    });
 
     const searchedPlugins = sources
       ? availablePlugins.filter((p) => sources.includes(p.name))
@@ -55,17 +72,16 @@ export const searchController = async (req, res) => {
 
     if (searchedPlugins.length === 0) {
       return res.status(400).json({
-        error: "No enabled plugins match the request",
-        details: "The requested sources are not available. Check /api/plugins for available sources.",
+        error: 'No enabled plugins match the request',
+        details:
+          'The requested sources are not available. Check /api/plugins for available sources.',
       });
     }
 
     if (errors.length === searchedPlugins.length && Object.keys(results).length === 0) {
-      return res.status(500).json({
-        error: "All search services failed",
-        details: Object.fromEntries(
-          errors.map((e) => [e.service.toLowerCase(), e.message])
-        ),
+      return res.status(502).json({
+        error: 'All search services failed',
+        details: Object.fromEntries(errors.map((e) => [e.service.toLowerCase(), e.message])),
       });
     }
 
@@ -78,8 +94,10 @@ export const searchController = async (req, res) => {
           query: query.trim(),
           results_count: finalResults.length,
         });
-      } catch (error) {
-        logger.warn('No se pudo guardar historial de búsqueda', { error: error.message });
+      } catch (dbError) {
+        logger.warn('No se pudo guardar historial de búsqueda', {
+          error: dbError.message,
+        });
       }
     }
 
@@ -88,12 +106,9 @@ export const searchController = async (req, res) => {
     const response = {
       tracks: finalResults,
       count: finalResults.length,
-      pagination: {
-        page,
-        limit,
-      },
+      pagination: { page, limit },
       sources: Object.fromEntries(
-        searchedPlugins.map((p) => [p.name, results[p.name]?.length ?? 0])
+        searchedPlugins.map((p) => [p.name, results[p.name]?.length ?? 0]),
       ),
     };
 
@@ -105,8 +120,16 @@ export const searchController = async (req, res) => {
     return res.status(statusCode).json(response);
   } catch (error) {
     logger.error('Error inesperado en búsqueda', { error: error.message });
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        error: error.name,
+        details: error.message,
+      });
+    }
+
     return res.status(500).json({
-      error: "Unexpected error during search",
+      error: 'Unexpected error during search',
       details: error.message,
     });
   }

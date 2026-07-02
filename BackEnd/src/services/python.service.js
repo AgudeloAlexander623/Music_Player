@@ -15,7 +15,7 @@ const FALLBACK_RECOMMENDATIONS = [
   { id: "fallback_10", name: "Shape of You", artist: "Ed Sheeran", album: "Divide", albumImage: "https://via.placeholder.com/300x300/1e1e2e/ffffff?text=ES", previewUrl: null, duration: null, source: "recommendation", reason: "Pop hit" },
 ];
 
-class PythonServiceError extends Error {
+export class PythonServiceError extends Error {
   constructor(message, statusCode) {
     super(message);
     this.name = "PythonServiceError";

@@ -10,7 +10,7 @@
  *     deduplicación entre sí
  *   - Los resultados se ordenan priorizando fuentes con audio
  *     reproducible sobre fuentes de solo metadatos
- *   - Orden de fusión: Deezer → FMA → YouTube → YouTube Music
+ *   - Orden de fusión: Deezer → FMA → Audius → YouTube → YouTube Music
  *     → Internet Archive → MusicBrainz
  */
 
@@ -31,6 +31,7 @@ export function mergeResults(sources = {}) {
   const {
     deezer = [],
     fma = [],
+    audius = [],
     youtube = [],
     youtube_music = [],
     youtubeMusic = [],
@@ -46,6 +47,8 @@ export function mergeResults(sources = {}) {
   deezer.forEach(addIfNotDuplicate);
 
   fma.forEach(addIfNotDuplicate);
+
+  audius.forEach(addIfNotDuplicate);
 
   const seenYouTubeIds = new Set();
 
