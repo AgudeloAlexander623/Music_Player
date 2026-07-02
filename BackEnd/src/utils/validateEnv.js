@@ -37,7 +37,6 @@ const OPTIONAL_VARS = {
   SPOTIFY_CLIENT_ID: 'Client ID de Spotify (necesario para buscar en Spotify)',
   SPOTIFY_CLIENT_SECRET: 'Client Secret de Spotify (necesario para buscar en Spotify)',
   FMA_API_KEY: 'API Key de Free Music Archive (necesario para buscar en FMA)',
-  MUSICBRAINZ_ENABLED: 'Activar MusicBrainz (metadata-only, sin audio). Por defecto desactivado.',
 };
 
 export function validateEnv() {

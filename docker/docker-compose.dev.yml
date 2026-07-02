@@ -63,7 +63,6 @@ services:
       - FMA_API_KEY=${FMA_API_KEY}
       - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_key_reproductor_2026}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
-      - MUSICBRAINZ_ENABLED=${MUSICBRAINZ_ENABLED:-true}
       - DB_PORT=5432
       - PYTHON_SERVICE_URL=http://python-service:8000
     ports:
