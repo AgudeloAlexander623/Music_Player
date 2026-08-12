@@ -15,7 +15,7 @@
 
 import logger from '../utils/logger.js';
 import { insert, findMany, findOne, update, remove } from '../db/database.js';
-import { ValidationError, NotFoundError, ForbiddenError, AppError } from '../utils/errors.js';
+import { ValidationError, NotFoundError, ForbiddenError, sendErrorResponse } from '../utils/errors.js';
 import {
   validate,
   createPlaylistSchema,
@@ -87,15 +87,7 @@ export const createPlaylist = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error creando playlist', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({ error: error.message });
-    }
-
-    res.status(500).json({
-      error: 'Internal server error',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -115,11 +107,7 @@ export const getPlaylists = async (req, res) => {
     res.json({ success: true, playlists });
   } catch (error) {
     logger.error('Error obteniendo playlists', { error: error.message });
-
-    res.status(500).json({
-      error: 'Internal server error',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -156,15 +144,7 @@ export const updatePlaylist = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error actualizando playlist', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({ error: error.message });
-    }
-
-    res.status(500).json({
-      error: 'Internal server error',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -191,15 +171,7 @@ export const deletePlaylist = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error eliminando playlist', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({ error: error.message });
-    }
-
-    res.status(500).json({
-      error: 'Internal server error',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -240,15 +212,7 @@ export const addTrackToPlaylist = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error agregando track a playlist', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({ error: error.message });
-    }
-
-    res.status(500).json({
-      error: 'Internal server error',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -272,15 +236,7 @@ export const getPlaylistTracks = async (req, res) => {
     res.json({ success: true, tracks });
   } catch (error) {
     logger.error('Error obteniendo tracks de playlist', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({ error: error.message });
-    }
-
-    res.status(500).json({
-      error: 'Internal server error',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -318,14 +274,6 @@ export const removeTrackFromPlaylist = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error eliminando track de playlist', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({ error: error.message });
-    }
-
-    res.status(500).json({
-      error: 'Internal server error',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };

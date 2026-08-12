@@ -13,6 +13,7 @@ import playlistsRoutes from "./routes/playlists.routes.js";
 import recommendationsRoutes from "./routes/recommendations.routes.js";
 import { initializeDatabase } from "./db/database.js";
 import { validateEnv } from "./utils/validateEnv.js";
+import { formatErrorResponse } from "./utils/errors.js";
 import logger from "./utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -67,10 +68,8 @@ app.use("/api/recommendations", recommendationsRoutes);
 
 app.use((err, _req, res, _next) => {
   logger.error("Error no manejado", { error: err.message, stack: err.stack });
-  res.status(err.statusCode || 500).json({
-    error: err.name || "Internal server error",
-    details: err.message || "Ocurrió un error inesperado",
-  });
+  const { statusCode, ...body } = formatErrorResponse(err);
+  res.status(statusCode).json(body);
 });
 
 const PORT = process.env.PORT || 4000;

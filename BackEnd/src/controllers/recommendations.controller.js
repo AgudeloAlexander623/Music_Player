@@ -17,6 +17,7 @@ import {
   getPopularRecommendations,
 } from '../services/python.service.js';
 import { PythonServiceError } from '../services/python.service.js';
+import { formatErrorResponse, sendErrorResponse } from '../utils/errors.js';
 
 /**
  * Normaliza un item de recomendación al formato del frontend.
@@ -76,17 +77,14 @@ export const getRecommendationsController = async (req, res) => {
     logger.error('Error obteniendo recomendaciones', { error: error.message });
 
     if (error instanceof PythonServiceError) {
-      return res.status(error.statusCode || 503).json({
-        error: 'Recommendation service unavailable',
-        details: error.message,
+      const { statusCode, ...body } = formatErrorResponse(error);
+      return res.status(statusCode).json({
+        ...body,
         hint: 'Start the Python service: cd python-services && uvicorn main:app --reload',
       });
     }
 
-    res.status(500).json({
-      error: 'Failed to get recommendations',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -129,10 +127,6 @@ export const getPopularRecommendationsController = async (req, res) => {
     logger.error('Error obteniendo recomendaciones populares', {
       error: error.message,
     });
-
-    res.status(500).json({
-      error: 'Failed to get popular recommendations',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };

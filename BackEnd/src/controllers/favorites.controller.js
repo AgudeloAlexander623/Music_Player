@@ -11,7 +11,7 @@
 
 import logger from '../utils/logger.js';
 import { insert, findMany, remove, findOne } from '../db/database.js';
-import { ValidationError, NotFoundError, ForbiddenError, ConflictError, AppError } from '../utils/errors.js';
+import { ValidationError, NotFoundError, ForbiddenError, ConflictError, sendErrorResponse } from '../utils/errors.js';
 import { validate, addFavoriteSchema } from '../utils/validation.js';
 
 /**
@@ -58,15 +58,7 @@ export const addFavorite = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error agregando favorito', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({ error: error.message });
-    }
-
-    res.status(500).json({
-      error: 'Internal server error',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -86,11 +78,7 @@ export const getFavorites = async (req, res) => {
     res.json({ success: true, favorites });
   } catch (error) {
     logger.error('Error obteniendo favoritos', { error: error.message });
-
-    res.status(500).json({
-      error: 'Internal server error',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -129,14 +117,6 @@ export const removeFavorite = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error eliminando favorito', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({ error: error.message });
-    }
-
-    res.status(500).json({
-      error: 'Internal server error',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };

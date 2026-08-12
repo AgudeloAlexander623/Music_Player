@@ -74,16 +74,54 @@ export class ConflictError extends AppError {
 }
 
 /**
- * Normaliza cualquier error a un objeto de respuesta JSON.
- * Si es AppError usa su statusCode, si no es 500.
+ * Normaliza cualquier error a un objeto de respuesta JSON SEGURO.
+ *
+ * POLÍTICA DE EXPOSICIÓN DE ERRORES:
+ * - Errores 4xx (AppError): son intencionales y su mensaje es seguro para
+ *   el cliente, se expone tal cual en el campo `error`.
+ * - Errores 5xx (inesperados): son internos. Su `message` puede contener
+ *   rutas, SQL o IPs internas, así que NUNCA se expone en producción:
+ *   se responde un mensaje genérico y el detalle real queda solo en el log.
+ * - En desarrollo (NODE_ENV !== production) se incluye el detalle real
+ *   para facilitar la depuración.
+ *
+ * USO:
+ *   const { statusCode, ...body } = formatErrorResponse(error);
+ *   res.status(statusCode).json(body);
  *
  * @param {Error} error
- * @returns {{ error: string, details: string, statusCode: number }}
+ * @returns {{ error: string, details?: string, statusCode: number }}
  */
 export function formatErrorResponse(error) {
+  const statusCode = error.statusCode || 500;
+
+  if (statusCode >= 500) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return {
+      error: 'Internal server error',
+      details: isProd
+        ? 'Ocurrió un error inesperado'
+        : error.message || 'An unexpected error occurred',
+      statusCode,
+    };
+  }
+
   return {
-    error: error.name || 'Internal server error',
-    details: error.message || 'An unexpected error occurred',
-    statusCode: error.statusCode || 500,
+    error: error.message || 'Request failed',
+    statusCode,
   };
+}
+
+/**
+ * Envía la respuesta HTTP de error usando formatErrorResponse.
+ * Centraliza la decisión de qué exponer para que ningún controller
+ * tenga que repetir la lógica de saneamiento.
+ *
+ * @param {import('express').Response} res
+ * @param {Error} error
+ * @returns {import('express').Response}
+ */
+export function sendErrorResponse(res, error) {
+  const { statusCode, ...body } = formatErrorResponse(error);
+  return res.status(statusCode).json(body);
 }

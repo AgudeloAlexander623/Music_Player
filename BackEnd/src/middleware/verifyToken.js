@@ -63,11 +63,9 @@ export const verifyTokenMiddleware = (req, res, next) => {
       });
     }
 
-    // Otros errores
-    return res.status(500).json({
-      error: 'Internal server error',
-      details: error.message,
-    });
+    // Errores inesperados: se delegan al handler global de app.js,
+    // que decide qué exponer según el entorno (sin fuga de detalles internos)
+    return next(error);
   }
 };
 

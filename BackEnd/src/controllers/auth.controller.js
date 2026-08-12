@@ -24,7 +24,7 @@ import {
   hashRefreshToken,
 } from '../services/auth.service.js';
 import { findOne, insert, findMany, remove } from '../db/database.js';
-import { ValidationError, AuthError, ConflictError, ForbiddenError, AppError } from '../utils/errors.js';
+import { ValidationError, AuthError, ConflictError, ForbiddenError, sendErrorResponse } from '../utils/errors.js';
 import { validate, registerSchema, loginSchema, refreshTokenSchema } from '../utils/validation.js';
 
 /**
@@ -104,18 +104,7 @@ export const register = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error en registro', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({
-        error: error.name,
-        details: error.message,
-      });
-    }
-
-    return res.status(500).json({
-      error: 'Registration failed',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -171,18 +160,7 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error en login', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({
-        error: error.name,
-        details: error.message,
-      });
-    }
-
-    return res.status(500).json({
-      error: 'Login failed',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -223,18 +201,7 @@ export const verifyTokenEndpoint = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error verificando token', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({
-        error: error.name,
-        details: error.message,
-      });
-    }
-
-    return res.status(500).json({
-      error: 'Token verification failed',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -259,11 +226,7 @@ export const guestLogin = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error en guest login', { error: error.message });
-
-    return res.status(500).json({
-      error: 'Guest login failed',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -338,18 +301,7 @@ export const refreshToken = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error refrescando token', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({
-        error: error.name,
-        details: error.message,
-      });
-    }
-
-    return res.status(500).json({
-      error: 'Token refresh failed',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -383,17 +335,6 @@ export const logout = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error en logout', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({
-        error: error.name,
-        details: error.message,
-      });
-    }
-
-    return res.status(500).json({
-      error: 'Logout failed',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };

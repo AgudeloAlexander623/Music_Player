@@ -65,17 +65,34 @@ describe('ConflictError', () => {
 });
 
 describe('formatErrorResponse', () => {
-  it('formatea un AppError correctamente', () => {
+  it('expone el mensaje como error visible en errores 4xx', () => {
     const err = new ValidationError('Email inválido');
     const result = formatErrorResponse(err);
-    assert.equal(result.error, 'ValidationError');
-    assert.equal(result.details, 'Email inválido');
+    assert.equal(result.error, 'Email inválido');
     assert.equal(result.statusCode, 400);
+    assert.equal(result.details, undefined);
   });
 
   it('formatea un error genérico como 500', () => {
     const err = new Error('Algo explotó');
     const result = formatErrorResponse(err);
     assert.equal(result.statusCode, 500);
+  });
+
+  it('oculta el detalle interno en errores 5xx en producción', () => {
+    process.env.NODE_ENV = 'production';
+    const err = new Error('connection refused at 172.17.0.2:5432');
+    const result = formatErrorResponse(err);
+    assert.equal(result.error, 'Internal server error');
+    assert.equal(result.details, 'Ocurrió un error inesperado');
+    assert.equal(result.statusCode, 500);
+    delete process.env.NODE_ENV;
+  });
+
+  it('expone el detalle interno en errores 5xx en desarrollo', () => {
+    const err = new Error('connection refused at 172.17.0.2:5432');
+    const result = formatErrorResponse(err);
+    assert.equal(result.error, 'Internal server error');
+    assert.equal(result.details, 'connection refused at 172.17.0.2:5432');
   });
 });

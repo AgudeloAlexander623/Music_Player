@@ -12,7 +12,7 @@ import logger from '../utils/logger.js';
 import pluginRegistry from '../services/plugins/index.js';
 import { mergeResults } from '../utils/mergeResults.js';
 import { insert } from '../db/database.js';
-import { AppError } from '../utils/errors.js';
+import { sendErrorResponse } from '../utils/errors.js';
 import { validate, searchQuerySchema } from '../utils/validation.js';
 
 const DEFAULT_LIMIT = 10;
@@ -120,17 +120,6 @@ export const searchController = async (req, res) => {
     return res.status(statusCode).json(response);
   } catch (error) {
     logger.error('Error inesperado en búsqueda', { error: error.message });
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({
-        error: error.name,
-        details: error.message,
-      });
-    }
-
-    return res.status(500).json({
-      error: 'Unexpected error during search',
-      details: error.message,
-    });
+    return sendErrorResponse(res, error);
   }
 };
