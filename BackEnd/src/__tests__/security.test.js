@@ -229,3 +229,81 @@ describe('JSON Body Limit', () => {
     assert.equal(res.status, 413);
   });
 });
+
+/* ── Verificación de token (JWT) ── */
+
+describe('Verificación de token (JWT)', () => {
+  const TEST_SECRET = 'test_secret_that_is_long_enough_for_hs256';
+
+  it('token con nbf futuro es un 401 (problema del cliente)', async () => {
+    const jwt = (await import('jsonwebtoken')).default;
+    const { verifyToken } = await import('../services/auth.service.js');
+
+    const original = process.env.JWT_SECRET;
+    process.env.JWT_SECRET = TEST_SECRET;
+
+    const future = Math.floor(Date.now() / 1000) + 3600;
+    const token = jwt.sign({ userId: 1, email: 'a@b.c' }, TEST_SECRET, {
+      algorithm: 'HS256',
+      notBefore: future,
+    });
+
+    let thrown;
+    try {
+      verifyToken(token);
+    } catch (error) {
+      thrown = error;
+    }
+
+    process.env.JWT_SECRET = original;
+
+    assert(thrown, 'debería lanzar un error');
+    assert.equal(thrown.statusCode, 401);
+    assert.equal(thrown.message, 'Invalid token');
+  });
+
+  it('token expirado es un 401 (problema del cliente)', async () => {
+    const jwt = (await import('jsonwebtoken')).default;
+    const { verifyToken } = await import('../services/auth.service.js');
+
+    const original = process.env.JWT_SECRET;
+    process.env.JWT_SECRET = TEST_SECRET;
+
+    const past = Math.floor(Date.now() / 1000) - 3600;
+    const token = jwt.sign(
+      { userId: 1, email: 'a@b.c', iat: past, exp: past + 10 },
+      TEST_SECRET,
+      { algorithm: 'HS256' },
+    );
+
+    let thrown;
+    try {
+      verifyToken(token);
+    } catch (error) {
+      thrown = error;
+    }
+
+    process.env.JWT_SECRET = original;
+
+    assert(thrown, 'debería lanzar un error');
+    assert.equal(thrown.statusCode, 401);
+  });
+
+  it('JWT_SECRET ausente es un 500 (problema del servidor)', async () => {
+    const { verifyToken } = await import('../services/auth.service.js');
+    const original = process.env.JWT_SECRET;
+    delete process.env.JWT_SECRET;
+
+    let thrown;
+    try {
+      verifyToken('un-token-cualquiera');
+    } catch (error) {
+      thrown = error;
+    }
+
+    process.env.JWT_SECRET = original;
+
+    assert(thrown, 'debería lanzar un error');
+    assert.equal(thrown.statusCode, 500);
+  });
+});

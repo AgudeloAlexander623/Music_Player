@@ -211,11 +211,12 @@ export function verifyToken(token) {
 
     return decoded;
   } catch (error) {
-    if (error.name === 'TokenExpiredError') {
-      throw new AuthServiceError('Token has expired', 401);
-    }
-    if (error.name === 'JsonWebTokenError') {
-      throw new AuthServiceError('Invalid token', 401);
+    // jsonwebtoken lanza JsonWebTokenError y sus subclases
+    // (TokenExpiredError, NotBeforeError, ...). Cualquier problema con el
+    // token ES del cliente (401); solo lo inesperado es del servidor (500).
+    if (error instanceof jwt.JsonWebTokenError) {
+      const expired = error.name === 'TokenExpiredError';
+      throw new AuthServiceError(expired ? 'Token has expired' : 'Invalid token', 401);
     }
     if (error instanceof AuthServiceError) throw error;
     throw new AuthServiceError(`Could not verify token: ${error.message}`, 500);

@@ -20,19 +20,9 @@ import { verifyToken, extractTokenFromHeader } from '../services/auth.service.js
 
 export const verifyTokenMiddleware = (req, res, next) => {
   try {
-    // Obtener header Authorization
+    // Obtener header Authorization y extraer token
     const authHeader = req.headers.authorization;
-
-    // Extraer token
-    let token;
-    try {
-      token = extractTokenFromHeader(authHeader);
-    } catch (error) {
-      return res.status(401).json({
-        error: 'Invalid authorization header',
-        details: error.message,
-      });
-    }
+    const token = extractTokenFromHeader(authHeader);
 
     // Verificar que token esté presente
     if (!token) {
@@ -55,16 +45,9 @@ export const verifyTokenMiddleware = (req, res, next) => {
   } catch (error) {
     logger.error('Error verificando token', { error: error.message });
 
-    // Errores de token
-    if (error.statusCode === 401) {
-      return res.status(401).json({
-        error: error.name || 'Authentication failed',
-        details: error.message,
-      });
-    }
-
-    // Errores inesperados: se delegan al handler global de app.js,
-    // que decide qué exponer según el entorno (sin fuga de detalles internos)
+    // La clasificación 401/500 la hace auth.service.js (verifyToken):
+    // problemas del token → 401, problemas del servidor → 500.
+    // Aquí solo se delega al handler global, que decide qué exponer.
     return next(error);
   }
 };

@@ -56,3 +56,36 @@ curl http://localhost:4000/api/favorites  # sin token válido → 500 con detall
 NODE_ENV=production npm start
 curl http://localhost:4000/api/favorites  # → { error: 'Internal server error', details: 'Ocurrió un error inesperado' }
 ```
+
+---
+
+## Corrección: errores sin statusCode 401 se respondían como 500
+
+**Severidad:** MEDIA-ALTA (clasificación incorrecta de errores de autenticación)
+
+**Problema:** En `middleware/verifyToken.js` la clasificación de errores era binaria y frágil:
+
+```js
+if (error.statusCode === 401) { ... }  // problema del cliente
+return next(error);                    // todo lo demás → 500
+```
+
+El mapeo 401/500 lo hacía `auth.service.js:verifyToken()` comparando **nombres de error hardcodeados** de `jsonwebtoken` (`TokenExpiredError`, `JsonWebTokenError`). Cualquier error de la librería fuera de esos nombres — por ejemplo `NotBeforeError` (token usado antes de su fecha `nbf`) — caía en el 500. Resultado: problemas **del cliente** (token inválido) se reportaban como **Internal server error**, confundiendo al frontend y disparando alertas de monitoreo por fallos que no eran del servidor.
+
+**Solución implementada (1 + 2):**
+
+1. **`auth.service.js` — el servicio es la única fuente de verdad:** se reemplazó la comparación por nombre con `error instanceof jwt.JsonWebTokenError`, que cubre todas las subclases (`TokenExpiredError`, `NotBeforeError`, etc.) → siempre `401` para problemas del token. Solo lo genuinamente inesperado (o `JWT_SECRET` ausente) es `500`.
+
+2. **`middleware/verifyToken.js` — deja de clasificar:** el `catch` ahora solo loguea y delega con `next(error)`. El handler global de `app.js` responde con `formatErrorResponse`: 401 con el mensaje seguro del servicio, 500 genérico.
+
+**Tests agregados (`__tests__/security.test.js`):**
+- Token con `nbf` futuro → `statusCode 401`
+- Token expirado → `statusCode 401`
+- `JWT_SECRET` ausente → `statusCode 500` (caso que NO debe romperse)
+
+**Archivos modificados:**
+- `BackEnd/src/services/auth.service.js` — mapeo robusto con `instanceof jwt.JsonWebTokenError`
+- `BackEnd/src/middleware/verifyToken.js` — middleware simplificado, delega al handler global
+- `BackEnd/src/__tests__/security.test.js` — tests de clasificación 401/500
+
+**Verificación:** `npm test` → 176/176 pass (3 nuevos). `npm run lint` → sin errores en archivos modificados.
