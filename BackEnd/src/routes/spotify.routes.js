@@ -3,6 +3,7 @@ import {
   configureSpotify,
   getSpotifyStatus,
 } from "../services/spotify.services.js";
+import { validate, configureSpotifySchema } from "../utils/validation.js";
 
 const router = express.Router();
 
@@ -12,24 +13,18 @@ router.get("/status", (_req, res) => {
 });
 
 router.post("/configure", async (req, res) => {
-  const { clientId, clientSecret } = req.body;
-
-  if (!clientId || !clientSecret) {
-    return res
-      .status(400)
-      .json({ success: false, error: "clientId and clientSecret are required" });
-  }
-
   try {
+    const { clientId, clientSecret } = validate(configureSpotifySchema, req.body);
+
     const result = await configureSpotify(clientId, clientSecret);
     if (result.success) {
       return res.json({ success: true });
     }
     return res.status(400).json(result);
-  } catch {
+  } catch (error) {
     return res
-      .status(500)
-      .json({ success: false, error: "Internal server error" });
+      .status(400)
+      .json({ success: false, error: error.message || "Invalid request" });
   }
 });
 

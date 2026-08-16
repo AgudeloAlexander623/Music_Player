@@ -1,23 +1,22 @@
 /**
- * PLUGIN DE SPOTIFY (DESHABILITADO)
+ * PLUGIN DE SPOTIFY
  *
- * Spotify queda deshabilitado por falta de credenciales válidas.
- * El código fuente se conserva intacto para una futura reactivación.
- * Para volver a habilitarlo:
- *   1. Obtener SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET desde
- *      https://developer.spotify.com/dashboard
- *   2. Configurarlos en .env o mediante la UI de configuración
- *   3. Cambiar isAvailable() para que retorne true cuando haya credenciales
+ * Búsqueda musical con previews de 30 segundos.
+ * Se activa automáticamente cuando hay credenciales válidas
+ * (SPOTIFY_CLIENT_ID + SPOTIFY_CLIENT_SECRET en .env o configuradas
+ * desde la UI vía POST /api/spotify/configure).
  */
+
+import { searchSpotify, getClientId, getClientSecret } from '../spotify.services.js';
 
 export default {
   name: 'spotify',
   description: 'Spotify — Búsqueda musical con previews de 30 segundos.',
   requiredEnv: ['SPOTIFY_CLIENT_ID', 'SPOTIFY_CLIENT_SECRET'],
   isAvailable() {
-    return false;
+    return Boolean(getClientId() && getClientSecret());
   },
-  search(query, { limit: _limit = 10, page: _page = 1 } = {}) {
-    return Promise.resolve([]);
+  search(query, { limit = 10, page = 1 } = {}) {
+    return searchSpotify(query, limit, page);
   },
 };

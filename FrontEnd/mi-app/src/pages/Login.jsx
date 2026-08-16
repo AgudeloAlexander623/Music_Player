@@ -72,6 +72,14 @@ export default function Login() {
       </div>
 
       <button
+        onClick={() => { window.location.href = '/api/auth/spotify/login'; }}
+        className="auth-button auth-button-spotify"
+        type="button"
+      >
+        Continuar con Spotify
+      </button>
+
+      <button
         onClick={handleGuestLogin}
         disabled={guestLoading}
         className="auth-button auth-button-guest"

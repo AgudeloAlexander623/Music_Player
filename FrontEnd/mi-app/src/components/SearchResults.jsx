@@ -67,6 +67,7 @@ export default function SearchResults({ results, onPlay, onAddFavorite }) {
         album: track.album,
         album_image: track.albumImage || track.thumbnail,
         preview_url: track.previewUrl,
+        video_id: track.videoId || null,
       });
       toast.success('Agregado a la playlist');
     } catch {

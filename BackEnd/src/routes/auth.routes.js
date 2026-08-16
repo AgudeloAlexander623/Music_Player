@@ -7,6 +7,8 @@ import {
   verifyTokenEndpoint,
   refreshToken,
   logout,
+  spotifyLogin,
+  spotifyCallback,
 } from '../controllers/auth.controller.js';
 import { verifyTokenMiddleware } from '../middleware/verifyToken.js';
 
@@ -28,5 +30,7 @@ router.post('/guest', guestLogin);
 router.post('/verify', verifyTokenEndpoint);
 router.post('/refresh', refreshToken);
 router.post('/logout', verifyTokenMiddleware, logout);
+router.get('/spotify/login', spotifyLogin);
+router.get('/spotify/callback', spotifyCallback);
 
 export default router;

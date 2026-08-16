@@ -25,6 +25,8 @@
 import jwt from 'jsonwebtoken';
 import bcryptjs from 'bcryptjs';
 import crypto from 'crypto';
+import { findOne, insert, update } from '../db/database.js';
+import { buildSpotifyAuthUrl } from './spotify.services.js';
 
 const REFRESH_TOKEN_BYTES = 40;
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;
@@ -295,4 +297,126 @@ export function hashRefreshToken(token) {
     throw new AuthServiceError('Refresh token is required', 401);
   }
   return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+/* ── Login social con Spotify (OAuth Authorization Code) ── */
+
+const SPOTIFY_STATE_TTL_MS = 10 * 60 * 1000;
+const spotifyOAuthStates = new Map(); // state -> { createdAt }
+
+function pruneSpotifyStates() {
+  const now = Date.now();
+  for (const [state, entry] of spotifyOAuthStates) {
+    if (now - entry.createdAt > SPOTIFY_STATE_TTL_MS) {
+      spotifyOAuthStates.delete(state);
+    }
+  }
+}
+
+/**
+ * Genera un estado OAuth y devuelve la URL de autorización de Spotify.
+ * @returns {string} URL a la que redirigir al navegador del usuario
+ */
+export function createSpotifyLoginUrl() {
+  pruneSpotifyStates();
+  const state = crypto.randomBytes(16).toString('hex');
+  spotifyOAuthStates.set(state, { createdAt: Date.now() });
+  return buildSpotifyAuthUrl(state);
+}
+
+/**
+ * Valida y consume un estado OAuth (defensa contra CSRF).
+ * Solo retorna true una vez por estado; los expirados se descartan.
+ * @param {string} state
+ * @returns {boolean}
+ */
+export function consumeSpotifyState(state) {
+  if (!state) return false;
+  const entry = spotifyOAuthStates.get(state);
+  if (!entry) return false;
+  spotifyOAuthStates.delete(state);
+  return Date.now() - entry.createdAt <= SPOTIFY_STATE_TTL_MS;
+}
+
+async function generateUniqueUsername(base) {
+  const cleanBase = (base || 'spotify_user')
+    .trim()
+    .replace(/[^a-zA-Z0-9_]/g, '')
+    .slice(0, 20) || 'spotify_user';
+
+  let candidate = cleanBase;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const existing = await findOne('users', { username: candidate });
+    if (!existing) return candidate;
+    candidate = `${cleanBase}_${Math.random().toString(36).slice(2, 6)}`;
+  }
+  return `${cleanBase}_${Date.now().toString(36)}`;
+}
+
+/**
+ * Crea o actualiza el usuario local a partir del perfil de Spotify.
+ *
+ * Estrategia:
+ * 1. Si ya existe un usuario con ese spotify_id → login (actualiza avatar).
+ * 2. Si no, pero existe un usuario con el mismo email (cuenta email/password)
+ *    → se vincula el spotify_id (accounts linking).
+ * 3. Si no existe → se crea una cuenta nueva.
+ *
+ * Los usuarios creados por OAuth reciben un password_hash aleatorio, por lo
+ * que el login por email/contraseña siempre les falla (solo entran por OAuth).
+ *
+ * @param {object} profile - Respuesta de GET /v1/me de Spotify
+ * @returns {Promise<object>} Fila de `users`
+ */
+export async function upsertSpotifyUser(profile) {
+  const spotifyId = profile?.id;
+  if (!spotifyId) {
+    throw new AuthServiceError('Spotify profile is missing the user id', 400);
+  }
+
+  const avatarUrl = profile.images?.[0]?.url ?? null;
+
+  const existing = await findOne('users', { spotify_id: spotifyId });
+  if (existing) {
+    const patch = {};
+    if (avatarUrl && existing.avatar_url !== avatarUrl) {
+      patch.avatar_url = avatarUrl;
+    }
+    if (Object.keys(patch).length > 0) {
+      await update('users', patch, { id: existing.id });
+    }
+    return existing;
+  }
+
+  const email = profile.email ? profile.email.toLowerCase() : null;
+
+  if (email) {
+    const byEmail = await findOne('users', { email });
+    if (byEmail) {
+      await update('users', { spotify_id: spotifyId }, { id: byEmail.id });
+      return byEmail;
+    }
+  }
+
+  const username = await generateUniqueUsername(profile.display_name);
+  const passwordHash = await hashPassword(crypto.randomBytes(24).toString('hex'));
+  const fallbackEmail = email || `${spotifyId}@spotify.local`;
+
+  const result = await insert('users', {
+    username,
+    email: fallbackEmail,
+    password_hash: passwordHash,
+    spotify_id: spotifyId,
+    avatar_url: avatarUrl,
+  });
+
+  return findOne('users', { id: result.insertId });
+}
+
+/**
+ * URL base del frontend, usada para redirigir tras el callback de OAuth.
+ * @returns {string}
+ */
+export function getFrontendUrl() {
+  return process.env.FRONTEND_URL || 'http://localhost:5173';
 }

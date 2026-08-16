@@ -4,7 +4,9 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const TOKEN_URL = "https://accounts.spotify.com/api/token";
+const AUTH_URL = "https://accounts.spotify.com/authorize";
 const SEARCH_URL = "https://api.spotify.com/v1/search";
+const ME_URL = "https://api.spotify.com/v1/me";
 const MAX_RETRIES = 2;
 const BASE_DELAY_MS = 1000;
 const TOKEN_TIMEOUT_MS = 5000;
@@ -47,7 +49,7 @@ function saveCredentials(clientId, clientSecret) {
   });
 }
 
-function getClientId() {
+export function getClientId() {
   if (
     process.env.SPOTIFY_CLIENT_ID &&
     !process.env.SPOTIFY_CLIENT_ID.startsWith("your_")
@@ -58,7 +60,7 @@ function getClientId() {
   return stored?.clientId ?? null;
 }
 
-function getClientSecret() {
+export function getClientSecret() {
   if (
     process.env.SPOTIFY_CLIENT_SECRET &&
     !process.env.SPOTIFY_CLIENT_SECRET.startsWith("your_")
@@ -67,6 +69,13 @@ function getClientSecret() {
   }
   const stored = loadCredentials();
   return stored?.clientSecret ?? null;
+}
+
+export function getSpotifyRedirectUri() {
+  return (
+    process.env.SPOTIFY_REDIRECT_URI ||
+    "http://localhost:4000/api/auth/spotify/callback"
+  );
 }
 
 async function getToken() {
@@ -144,6 +153,109 @@ export function _resetForTest() {
   accessToken = null;
   expiresAt = 0;
   tokenPromise = null;
+}
+
+/**
+ * Intercambia un `code` de OAuth por tokens de acceso del usuario.
+ * Flujo Authorization Code (con client secret en el servidor).
+ * @param {string} code - Código de autorización de Spotify
+ * @returns {Promise<object>} { access_token, refresh_token, ... }
+ */
+export async function exchangeSpotifyCode(code) {
+  const clientId = getClientId();
+  const clientSecret = getClientSecret();
+
+  if (!clientId || !clientSecret) {
+    throw new SpotifyServiceError(
+      "Spotify credentials (SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET) are missing",
+      400,
+      false
+    );
+  }
+
+  try {
+    const res = await axios.post(
+      TOKEN_URL,
+      new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: getSpotifyRedirectUri(),
+      }),
+      {
+        headers: {
+          Authorization:
+            "Basic " +
+            Buffer.from(`${clientId}:${clientSecret}`).toString("base64"),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        timeout: TOKEN_TIMEOUT_MS,
+      }
+    );
+    return res.data;
+  } catch (error) {
+    if (error instanceof SpotifyServiceError) throw error;
+    if (error.response) {
+      throw new SpotifyServiceError(
+        `Spotify token exchange failed: ${error.response.status} ${error.response.statusText}`,
+        error.response.status,
+        error.response.status >= 500
+      );
+    }
+    throw new SpotifyServiceError(
+      `Failed to exchange Spotify code: ${error.message}`,
+      500,
+      false
+    );
+  }
+}
+
+/**
+ * Obtiene el perfil del usuario autenticado desde /v1/me.
+ * @param {string} accessToken - Token de acceso del usuario
+ * @returns {Promise<object>} Perfil { id, display_name, email, images, ... }
+ */
+export async function getSpotifyProfile(accessToken) {
+  try {
+    const res = await axios.get(ME_URL, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      timeout: SEARCH_TIMEOUT_MS,
+    });
+    return res.data;
+  } catch (error) {
+    if (error instanceof SpotifyServiceError) throw error;
+    if (error.response) {
+      throw new SpotifyServiceError(
+        `Spotify profile request failed: ${error.response.status} ${error.response.statusText}`,
+        error.response.status,
+        error.response.status >= 500
+      );
+    }
+    throw new SpotifyServiceError(
+      `Failed to fetch Spotify profile: ${error.message}`,
+      500,
+      false
+    );
+  }
+}
+
+/**
+ * Construye la URL de autorización de Spotify para login social.
+ * @returns {{ url: string, state: string }}
+ */
+export function buildSpotifyAuthUrl(state) {
+  const clientId = getClientId();
+  const redirectUri = getSpotifyRedirectUri();
+  const scope = "user-read-email user-read-private";
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: "code",
+    redirect_uri: redirectUri,
+    scope,
+    state,
+  });
+
+  return `${AUTH_URL}?${params.toString()}`;
 }
 
 function normalizeTrack(track) {

@@ -43,6 +43,7 @@ export default function Favorites() {
     album: fav.album,
     albumImage: fav.album_image || null,
     previewUrl: fav.preview_url,
+    videoId: fav.video_id || null,
     source: fav.source,
   });
 

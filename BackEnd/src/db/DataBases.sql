@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(100) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
+    spotify_id VARCHAR(255),
+    avatar_url TEXT,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -23,6 +25,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_spotify_id ON users (spotify_id) WHERE spotify_id IS NOT NULL;
 
 -- ===========================================
 -- TABLA: TOKENS DE REFRESCO
@@ -48,12 +51,13 @@ CREATE TABLE IF NOT EXISTS favorite_tracks (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     external_track_id VARCHAR(255) NOT NULL,
-    source VARCHAR(50) NOT NULL CHECK (source IN ('spotify', 'musicbrainz', 'fma', 'youtube', 'youtube-music', 'deezer')),
+    source VARCHAR(50) NOT NULL CHECK (source IN ('spotify', 'deezer', 'youtube', 'youtube_music', 'musicbrainz', 'fma', 'internetarchive', 'audius')),
     track_title VARCHAR(255) NOT NULL,
     artist VARCHAR(255),
     album VARCHAR(255),
     album_image TEXT,
     preview_url TEXT,
+    video_id VARCHAR(64),
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (user_id, external_track_id, source)
 );
@@ -99,12 +103,13 @@ CREATE TABLE IF NOT EXISTS playlist_tracks (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     playlist_id INTEGER NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
     external_track_id VARCHAR(255) NOT NULL,
-    source VARCHAR(50) NOT NULL CHECK (source IN ('spotify', 'musicbrainz', 'fma', 'youtube', 'youtube-music', 'deezer')),
+    source VARCHAR(50) NOT NULL CHECK (source IN ('spotify', 'deezer', 'youtube', 'youtube_music', 'musicbrainz', 'fma', 'internetarchive', 'audius')),
     track_title VARCHAR(255) NOT NULL,
     artist VARCHAR(255),
     album VARCHAR(255),
     album_image TEXT,
     preview_url TEXT,
+    video_id VARCHAR(64),
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

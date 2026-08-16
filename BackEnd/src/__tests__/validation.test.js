@@ -114,6 +114,57 @@ describe('addFavoriteSchema', () => {
     });
     assert(!result.success);
   });
+
+  it('acepta todas las fuentes reales de los plugins', () => {
+    const sources = [
+      'spotify',
+      'deezer',
+      'youtube',
+      'youtube_music',
+      'musicbrainz',
+      'fma',
+      'internetarchive',
+      'audius',
+    ];
+    for (const source of sources) {
+      const result = addFavoriteSchema.safeParse({
+        external_track_id: '123',
+        source,
+        track_title: 'Song',
+      });
+      assert(result.success, `debería aceptar source=${source}`);
+    }
+  });
+
+  it('rechaza la fuente legacy con guion youtube-music', () => {
+    const result = addFavoriteSchema.safeParse({
+      external_track_id: '123',
+      source: 'youtube-music',
+      track_title: 'Song',
+    });
+    assert(!result.success);
+  });
+
+  it('acepta y conserva video_id para tracks de YouTube', () => {
+    const result = addFavoriteSchema.safeParse({
+      external_track_id: '123',
+      source: 'youtube',
+      track_title: 'Song',
+      video_id: 'dQw4w9WgXcQ',
+    });
+    assert(result.success);
+    assert.equal(result.data.video_id, 'dQw4w9WgXcQ');
+  });
+
+  it('video_id es null por defecto si no se envía', () => {
+    const result = addFavoriteSchema.safeParse({
+      external_track_id: '123',
+      source: 'deezer',
+      track_title: 'Song',
+    });
+    assert(result.success);
+    assert.equal(result.data.video_id, null);
+  });
 });
 
 describe('createPlaylistSchema', () => {

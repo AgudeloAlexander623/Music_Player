@@ -11,6 +11,7 @@ import authRoutes from "./routes/auth.routes.js";
 import favoritesRoutes from "./routes/favorites.routes.js";
 import playlistsRoutes from "./routes/playlists.routes.js";
 import recommendationsRoutes from "./routes/recommendations.routes.js";
+import spotifyRoutes from "./routes/spotify.routes.js";
 import { initializeDatabase } from "./db/database.js";
 import { validateEnv } from "./utils/validateEnv.js";
 import { formatErrorResponse } from "./utils/errors.js";
@@ -65,6 +66,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/favorites", favoritesRoutes);
 app.use("/api/playlists", playlistsRoutes);
 app.use("/api/recommendations", recommendationsRoutes);
+app.use("/api/spotify", spotifyRoutes);
 
 app.use((err, _req, res, _next) => {
   logger.error("Error no manejado", { error: err.message, stack: err.stack });

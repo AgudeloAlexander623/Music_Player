@@ -47,6 +47,7 @@ export const addFavorite = async (req, res) => {
       album: data.album || null,
       album_image: data.album_image || null,
       preview_url: data.preview_url || null,
+      video_id: data.video_id || null,
     });
 
     const favorite = await findOne('favorite_tracks', { id: result.insertId });

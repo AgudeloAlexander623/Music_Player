@@ -76,6 +76,8 @@ services:
       - DB_POOL_LIMIT=10
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI:-http://localhost:4000/api/auth/spotify/callback}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - FMA_API_KEY=${FMA_API_KEY}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
       - JWT_SECRET=${JWT_SECRET}

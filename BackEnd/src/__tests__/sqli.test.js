@@ -1,7 +1,5 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { executeQuery, initializeDatabase, closeDatabase } from '../db/database.js';
-import { validateEnv } from '../utils/validateEnv.js';
 
 /* ── SQL Injection: sanitizeIdentifier ── */
 

@@ -82,6 +82,7 @@ export default function SearchPage() {
         album: track.album,
         album_image: track.albumImage || track.thumbnail,
         preview_url: track.previewUrl,
+        video_id: track.videoId || null,
       });
       toast.success('Agregado a favoritos');
     } catch {

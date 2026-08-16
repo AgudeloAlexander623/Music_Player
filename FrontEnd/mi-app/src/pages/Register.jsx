@@ -83,6 +83,21 @@ export default function Register() {
           {loading ? 'Cargando...' : 'Registrarse'}
         </button>
       </form>
+
+      <div className="auth-divider">
+        <span className="auth-divider-line" />
+        <span className="auth-divider-text">o</span>
+        <span className="auth-divider-line" />
+      </div>
+
+      <button
+        onClick={() => { window.location.href = '/api/auth/spotify/login'; }}
+        className="auth-button auth-button-spotify"
+        type="button"
+      >
+        Continuar con Spotify
+      </button>
+
       <p className="auth-link">
         ¿Ya tienes cuenta? <Link to="/login">Inicia Sesión</Link>
       </p>

@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import SearchPage from './pages/SearchPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import SpotifyCallback from './pages/SpotifyCallback';
 import Favorites from './pages/Favorites';
 import Playlists from './pages/Playlists';
 import Profile from './pages/Profile';
@@ -94,6 +95,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/auth/callback" element={<SpotifyCallback />} />
         <Route path="/" element={<ProtectedLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="search" element={<SearchPage />} />

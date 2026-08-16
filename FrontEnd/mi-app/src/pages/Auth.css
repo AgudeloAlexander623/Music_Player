@@ -93,6 +93,22 @@
   border-color: rgba(194, 90, 125, 0.6);
 }
 
+.auth-button-spotify {
+  background: #1db954;
+  margin-bottom: 12px;
+}
+
+.auth-button-spotify:hover:not(:disabled) {
+  background: #1ed760;
+  box-shadow: 0 8px 24px rgba(29, 185, 84, 0.35);
+}
+
+.auth-status {
+  color: rgba(230, 237, 243, 0.85);
+  font-size: 1rem;
+  text-align: center;
+}
+
 .auth-divider {
   width: 100%;
   max-width: 400px;

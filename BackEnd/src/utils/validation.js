@@ -52,7 +52,7 @@ export const refreshTokenSchema = z.object({
 
 /* ── Esquemas de favoritos ── */
 
-const validSources = ['spotify', 'musicbrainz', 'fma', 'youtube', 'youtube-music', 'deezer'];
+const validSources = ['spotify', 'deezer', 'youtube', 'youtube_music', 'musicbrainz', 'fma', 'internetarchive', 'audius'];
 
 export const addFavoriteSchema = z.object({
   external_track_id: z.string().min(1, 'external_track_id is required'),
@@ -64,6 +64,7 @@ export const addFavoriteSchema = z.object({
   album: z.string().optional().default(''),
   album_image: z.string().optional().default(''),
   preview_url: z.string().optional().nullable().default(null),
+  video_id: z.string().optional().nullable().default(null),
 });
 
 /* ── Esquemas de playlists ── */
@@ -88,6 +89,7 @@ export const addTrackToPlaylistSchema = z.object({
   album: z.string().optional().default(''),
   album_image: z.string().optional().default(''),
   preview_url: z.string().optional().nullable().default(null),
+  video_id: z.string().optional().nullable().default(null),
 });
 
 /* ── Esquemas de búsqueda ── */

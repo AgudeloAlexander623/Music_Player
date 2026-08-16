@@ -69,14 +69,22 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     setUser(null);
   }, []);
 
+  const completeSocialLogin = useCallback(({ token, refreshToken, user }) => {
+    localStorage.setItem('token', token);
+    if (refreshToken) localStorage.setItem('refresh_token', refreshToken);
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
+  }, []);
+
   const value = useMemo(() => ({
-    user, login, register, guestLogin, logout, loading,
+    user, login, register, guestLogin, logout, completeSocialLogin, loading,
     isGuest, isAuthenticated,
-  }), [user, login, register, guestLogin, logout, loading, isGuest, isAuthenticated]);
+  }), [user, login, register, guestLogin, logout, completeSocialLogin, loading, isGuest, isAuthenticated]);
 
   return (
     <AuthContext.Provider value={value}>

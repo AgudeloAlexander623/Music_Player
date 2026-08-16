@@ -108,6 +108,7 @@ export default function Playlists() {
       album: track.album,
       albumImage: track.album_image || null,
       previewUrl: track.preview_url,
+      videoId: track.video_id || null,
       source: track.source,
     };
     const trackQueue = tracks.map((t) => ({
@@ -117,6 +118,7 @@ export default function Playlists() {
       album: t.album,
       albumImage: t.album_image || null,
       previewUrl: t.preview_url,
+      videoId: t.video_id || null,
       source: t.source,
     }));
     playTrack(trackData, trackQueue);

@@ -22,7 +22,12 @@ import {
   extractTokenFromHeader,
   generateRefreshToken,
   hashRefreshToken,
+  createSpotifyLoginUrl,
+  consumeSpotifyState,
+  upsertSpotifyUser,
+  getFrontendUrl,
 } from '../services/auth.service.js';
+import { exchangeSpotifyCode, getSpotifyProfile } from '../services/spotify.services.js';
 import { findOne, insert, findMany, remove } from '../db/database.js';
 import { ValidationError, AuthError, ConflictError, ForbiddenError, sendErrorResponse } from '../utils/errors.js';
 import { validate, registerSchema, loginSchema, refreshTokenSchema } from '../utils/validation.js';
@@ -336,5 +341,89 @@ export const logout = async (req, res) => {
   } catch (error) {
     logger.error('Error en logout', { error: error.message });
     return sendErrorResponse(res, error);
+  }
+};
+
+/**
+ * ENDPOINT: INICIAR LOGIN SOCIAL CON SPOTIFY
+ *
+ * GET /api/auth/spotify/login
+ * Redirige (302) al navegador a la página de autorización de Spotify.
+ */
+export const spotifyLogin = async (_req, res) => {
+  try {
+    const url = createSpotifyLoginUrl();
+    return res.redirect(url);
+  } catch (error) {
+    logger.error('Error iniciando login de Spotify', { error: error.message });
+    return sendErrorResponse(res, error);
+  }
+};
+
+/**
+ * ENDPOINT: CALLBACK DE SPOTIFY OAuth
+ *
+ * GET /api/auth/spotify/callback?code=...&state=...
+ * Spotify redirige aquí tras la autorización. El backend:
+ * 1. Valida el estado (anti-CSRF)
+ * 2. Intercambia el code por tokens
+ * 3. Obtiene el perfil del usuario (/v1/me)
+ * 4. Crea/vincula/actualiza el usuario local
+ * 5. Emite JWT + refresh token y redirige al frontend con la sesión
+ */
+export const spotifyCallback = async (req, res) => {
+  const frontendUrl = getFrontendUrl();
+
+  try {
+    const { code, state, error: spotifyError } = req.query;
+
+    if (spotifyError) {
+      logger.warn('Usuario rechazó la autorización de Spotify', { error: spotifyError });
+      return res.redirect(`${frontendUrl}/login?error=spotify_denied`);
+    }
+
+    if (!consumeSpotifyState(state)) {
+      logger.warn('Estado OAuth inválido o expirado');
+      return res.redirect(`${frontendUrl}/login?error=invalid_state`);
+    }
+
+    if (!code) {
+      logger.warn('Falta el código de autorización de Spotify');
+      return res.redirect(`${frontendUrl}/login?error=missing_code`);
+    }
+
+    const tokenData = await exchangeSpotifyCode(code);
+    const profile = await getSpotifyProfile(tokenData.access_token);
+
+    const user = await upsertSpotifyUser(profile);
+
+    if (!user.is_active) {
+      throw new ForbiddenError('This account has been disabled.');
+    }
+
+    const accessToken = generateToken(user.id, user.email);
+    const refreshTokenData = generateRefreshToken();
+
+    await insert('refresh_tokens', {
+      user_id: user.id,
+      token_hash: refreshTokenData.tokenHash,
+      expires_at: refreshTokenData.expiresAt,
+    });
+
+    const params = new URLSearchParams({
+      token: accessToken,
+      refresh_token: refreshTokenData.token,
+      user: JSON.stringify({
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+        avatar_url: user.avatar_url ?? null,
+      }),
+    });
+
+    return res.redirect(`${frontendUrl}/auth/callback?${params.toString()}`);
+  } catch (error) {
+    logger.error('Error en callback de Spotify', { error: error.message });
+    return res.redirect(`${frontendUrl}/login?error=spotify_auth_failed`);
   }
 };
