@@ -80,7 +80,7 @@ export const getRecommendationsController = async (req, res) => {
       const { statusCode, ...body } = formatErrorResponse(error);
       return res.status(statusCode).json({
         ...body,
-        hint: 'Start the Python service: cd python-services && uvicorn main:app --reload',
+        hint: 'El servicio de recomendaciones no está disponible en este momento. Inténtalo más tarde.',
       });
     }
 

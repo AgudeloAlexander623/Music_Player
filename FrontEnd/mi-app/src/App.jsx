@@ -14,6 +14,7 @@ import SpotifyCallback from './pages/SpotifyCallback';
 import Favorites from './pages/Favorites';
 import Playlists from './pages/Playlists';
 import Profile from './pages/Profile';
+import NotFound from './pages/NotFound';
 import './App.css';
 
 const PlayerContext = createContext();
@@ -102,7 +103,9 @@ export default function App() {
           <Route path="favorites" element={<Favorites />} />
           <Route path="playlists" element={<Playlists />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="*" element={<NotFound />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

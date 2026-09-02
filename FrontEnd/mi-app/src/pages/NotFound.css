@@ -1,0 +1,35 @@
+.notfound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  text-align: center;
+  padding: 40px;
+}
+
+.notfound-title {
+  font-size: 4rem;
+  margin: 0;
+  color: var(--accent);
+}
+
+.notfound-text {
+  font-size: 1.1rem;
+  margin: 12px 0 24px;
+}
+
+.notfound-link {
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #091117;
+  padding: 10px 20px;
+  border-radius: 24px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+
+.notfound-link:hover {
+  opacity: 0.85;
+}

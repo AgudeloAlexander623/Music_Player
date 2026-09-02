@@ -9,6 +9,7 @@
 
 import express from 'express';
 import pluginRegistry from '../services/plugins/index.js';
+import { verifyTokenMiddleware, requireRealUser } from '../middleware/verifyToken.js';
 
 const router = express.Router();
 
@@ -31,7 +32,7 @@ router.get('/', (_req, res) => {
  * Fuerza la activación de un plugin, incluso si no cumple
  * los requisitos de entorno.
  */
-router.post('/activate', (req, res) => {
+router.post('/activate', verifyTokenMiddleware, requireRealUser, (req, res) => {
   const { pluginName } = req.body;
 
   if (!pluginName) {
@@ -59,7 +60,7 @@ router.post('/activate', (req, res) => {
  *
  * Fuerza la desactivación de un plugin.
  */
-router.post('/deactivate', (req, res) => {
+router.post('/deactivate', verifyTokenMiddleware, requireRealUser, (req, res) => {
   const { pluginName } = req.body;
 
   if (!pluginName) {

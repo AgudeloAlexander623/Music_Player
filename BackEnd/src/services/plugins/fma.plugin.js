@@ -1,11 +1,9 @@
-import { searchFMA } from '../fma.services.js';
-
 export default {
   name: 'fma',
   description:
-    'Free Music Archive — Música libre de derechos con licencias CC (respaldado por Audius).',
+    'Free Music Archive — API original descontinuada. El contenido está disponible vía Audius.',
   requiredEnv: [],
-  search(query, { limit = 10, page = 1 } = {}) {
-    return searchFMA(query, page, limit);
+  async search() {
+    return [];
   },
 };

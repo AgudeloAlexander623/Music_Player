@@ -133,7 +133,7 @@ class TestScoreTrack:
         inp = TrackInput(artist="Queen")
         assert score_track(inp, self.catalog_track) >= 5.0
 
-    def score_for_similar_artist(self):
+    def test_score_for_similar_artist(self):
         inp = TrackInput(artist="Led Zeppelin")
         track = {"id": "2", "name": "Under Pressure", "artist": "Queen", "album": "", "genre": "rock"}
         assert score_track(inp, track) >= 5.0

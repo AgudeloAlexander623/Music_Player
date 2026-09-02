@@ -16,13 +16,62 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error) => {
+  failedQueue.forEach((prom) => (error ? prom.reject(error) : prom.resolve()));
+  failedQueue = [];
+};
+
+const clearSession = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user');
+  window.dispatchEvent(new CustomEvent('auth:logout'));
+};
+
 // Interceptor para manejo de errores
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
+  async (error) => {
+    const original = error.config;
+    const { status } = error.response || {};
+
+    if (status === 401 && !original._retry && localStorage.getItem('refresh_token')) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(() => api(original));
+      }
+
+      original._retry = true;
+      isRefreshing = true;
+
+      try {
+        const refreshToken = localStorage.getItem('refresh_token');
+        const res = await axios.post(
+          `${api.defaults.baseURL}/auth/refresh`,
+          { refresh_token: refreshToken }
+        );
+        localStorage.setItem('token', res.data.token);
+        if (res.data.refresh_token) {
+          localStorage.setItem('refresh_token', res.data.refresh_token);
+        }
+        processQueue(null);
+        return api(original);
+      } catch (refreshError) {
+        processQueue(refreshError);
+        clearSession();
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    if (status === 401) {
       console.warn('[API] 401 no autorizado. Token inválido o expirado.');
-      localStorage.removeItem('token');
+      clearSession();
     }
     return Promise.reject(error);
   }

@@ -34,6 +34,14 @@ export function AuthProvider({ children }) {
     verifySession();
   }, [verifySession]);
 
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      setUser(null);
+    };
+    window.addEventListener('auth:logout', handleAuthLogout);
+    return () => window.removeEventListener('auth:logout', handleAuthLogout);
+  }, []);
+
   const login = useCallback(async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
     localStorage.setItem('token', res.data.token);
@@ -68,10 +76,21 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    let isLocalGuest = false;
+    try {
+      isLocalGuest = storedUser && JSON.parse(storedUser).guest === true;
+    } catch {
+      isLocalGuest = false;
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     setUser(null);
+    if (token && !isLocalGuest) {
+      api.post('/auth/logout').catch(() => {});
+    }
   }, []);
 
   const completeSocialLogin = useCallback(({ token, refreshToken, user }) => {

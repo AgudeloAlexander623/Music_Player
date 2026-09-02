@@ -33,9 +33,9 @@ const OPTIONAL_VARS = {
   CORS_ORIGINS: 'Orígenes permitidos separados por coma (ej: http://localhost:5173,https://midominio.com). Por defecto: http://localhost:5173,http://localhost:4000',
   SPOTIFY_CLIENT_ID: 'Client ID de Spotify (necesario para buscar en Spotify)',
   SPOTIFY_CLIENT_SECRET: 'Client Secret de Spotify (necesario para buscar en Spotify)',
-  FMA_API_KEY: 'API Key de Free Music Archive (necesario para buscar en FMA)',
-  JAMENDO_CLIENT_ID: 'Client ID de Jamendo (necesario para buscar en Jamendo)',
-  SOUNDCLOUD_CLIENT_ID: 'Client ID de SoundCloud (necesario para buscar en SoundCloud)',
+  SPOTIFY_REDIRECT_URI: 'URI de redirección OAuth de Spotify (necesario para login con Spotify)',
+  PYTHON_SERVICE_URL: 'URL del microservicio Python de recomendaciones. Por defecto: http://localhost:8000',
+  FRONTEND_URL: 'URL del frontend para el redirect de autenticación social. Por defecto: http://localhost:5173',
 };
 
 export function validateEnv() {
